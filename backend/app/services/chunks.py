@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 import asyncpg
 
 from ..config import settings
@@ -55,9 +53,7 @@ class ChunkService:
 
         return ChunkSearchResponse(total=total, items=items, query_metadata=metadata)
 
-    async def get_chunk(
-        self, chunk_id: str, *, include_context: bool = False
-    ) -> Optional[ChunkHit]:
+    async def get_chunk(self, chunk_id: str, *, include_context: bool = False) -> ChunkHit | None:
         """Fetch a single chunk embedding by ID."""
 
         row = await self.repo.get_chunk(

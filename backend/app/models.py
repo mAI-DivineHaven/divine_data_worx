@@ -1,10 +1,12 @@
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Literal
+from typing import Any, Literal
+
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 # ============================================================================
 # Domain Models - Core biblical text entities
 # ============================================================================
+
 
 class Verse(BaseModel):
     """Complete verse record with full metadata."""
@@ -46,19 +48,20 @@ class Translation(BaseModel):
     """Translation metadata."""
 
     translation_code: str
-    language: Optional[str] = None
-    format: Optional[str] = None
+    language: str | None = None
+    format: str | None = None
 
 
 # ============================================================================
 # Search Models - Query and response schemas
 # ============================================================================
 
+
 class FTSQuery(BaseModel):
     """Full-text search query parameters."""
 
     q: str
-    translation: Optional[str] = None
+    translation: str | None = None
     limit: int = Field(50, ge=1, le=500)
     offset: int = Field(0, ge=0)
 
@@ -74,10 +77,10 @@ class FTSQuery(BaseModel):
 class VectorQuery(BaseModel):
     """Semantic vector search query parameters."""
 
-    embedding: List[float]
+    embedding: list[float]
     model: str = "embeddinggemma"
     dim: int = 768
-    translation: Optional[str] = None
+    translation: str | None = None
     top_k: int = Field(50, ge=1, le=500)
 
     @model_validator(mode="after")
@@ -94,15 +97,15 @@ class VectorQuery(BaseModel):
 class HybridQuery(BaseModel):
     """Hybrid search query combining FTS and vector search."""
 
-    q: Optional[str] = None
-    embedding: Optional[List[float]] = None
+    q: str | None = None
+    embedding: list[float] | None = None
     model: str = "embeddinggemma"
     dim: int = 768
     vector_k: int = Field(50, ge=1, le=500)
     fts_k: int = Field(50, ge=1, le=500)
     k_rrf: int = Field(60, ge=1, le=1000)
     top_k: int = Field(50, ge=1, le=500)
-    translation: Optional[str] = None
+    translation: str | None = None
 
 
 class RetrievalQuery(HybridQuery):
@@ -124,15 +127,15 @@ class SearchResponse(BaseModel):
     """Search results container."""
 
     total: int
-    items: List[SearchHit]
+    items: list[SearchHit]
 
 
 class GraphExpansion(BaseModel):
     """Graph expansion for a verse including parallel renditions."""
 
     verse_id: str
-    cvk: Optional[str] = None
-    renditions: List["Rendition"] = Field(default_factory=list)
+    cvk: str | None = None
+    renditions: list["Rendition"] = Field(default_factory=list)
 
 
 class GraphExpansionInfo(BaseModel):
@@ -158,20 +161,21 @@ class RetrievalHit(BaseModel):
     """Combined retrieval result with optional graph expansion."""
 
     hit: SearchHit
-    parallels: Optional[GraphExpansion] = None
+    parallels: GraphExpansion | None = None
 
 
 class RetrievalResponse(BaseModel):
     """Response envelope for orchestrated retrieval."""
 
     total: int
-    items: List[RetrievalHit]
+    items: list[RetrievalHit]
     fusion: FusionInfo
 
 
 # ============================================================================
 # Graph Models - Cross-translation relationships
 # ============================================================================
+
 
 class Rendition(BaseModel):
     """Single verse rendition in a specific translation."""
@@ -196,19 +200,20 @@ class GraphNeighborhood(BaseModel):
     """Canonical verse node and its neighbouring renditions."""
 
     canonical: CanonicalVerse
-    renditions: List[Rendition]
+    renditions: list[Rendition]
 
 
 class ParallelsResponse(BaseModel):
     """Parallel verses across translations."""
 
     cvk: str
-    renditions: List[Rendition]
+    renditions: list[Rendition]
 
 
 # ============================================================================
 # Translation Stats Models
 # ============================================================================
+
 
 class TranslationEmbeddingStats(BaseModel):
     """Embedding coverage metrics per translation.
@@ -240,18 +245,19 @@ EmbeddingCoverage = TranslationEmbeddingStats
 # Asset Models - Multi-modal resource management
 # ============================================================================
 
+
 class Asset(BaseModel):
     """Complete asset record with metadata and payload references."""
 
     asset_id: str
-    media_type: Optional[str] = None
-    title: Optional[str] = None
-    description: Optional[str] = None
-    text_payload: Optional[str] = None
-    payload_json: Optional[Dict[str, Any]] = None
-    license: Optional[str] = None
-    origin_url: Optional[str] = None
-    created_at: Optional[datetime] = None
+    media_type: str | None = None
+    title: str | None = None
+    description: str | None = None
+    text_payload: str | None = None
+    payload_json: dict[str, Any] | None = None
+    license: str | None = None
+    origin_url: str | None = None
+    created_at: datetime | None = None
 
 
 class AssetCreate(BaseModel):
@@ -259,41 +265,41 @@ class AssetCreate(BaseModel):
 
     media_type: str
     title: str
-    description: Optional[str] = None
-    text_payload: Optional[str] = None
-    payload_json: Optional[Dict[str, Any]] = None
-    license: Optional[str] = None
-    origin_url: Optional[str] = None
+    description: str | None = None
+    text_payload: str | None = None
+    payload_json: dict[str, Any] | None = None
+    license: str | None = None
+    origin_url: str | None = None
 
 
 class AssetUpdate(BaseModel):
     """Partial update payload for asset records."""
 
-    media_type: Optional[str] = None
-    title: Optional[str] = None
-    description: Optional[str] = None
-    text_payload: Optional[str] = None
-    payload_json: Optional[Dict[str, Any]] = None
-    license: Optional[str] = None
-    origin_url: Optional[str] = None
+    media_type: str | None = None
+    title: str | None = None
+    description: str | None = None
+    text_payload: str | None = None
+    payload_json: dict[str, Any] | None = None
+    license: str | None = None
+    origin_url: str | None = None
 
 
 class AssetListResponse(BaseModel):
     """Paginated list response containing asset summaries."""
 
     total: int
-    items: List[Asset]
+    items: list[Asset]
 
 
 class AssetEmbeddingRequest(BaseModel):
     """Request payload for providing or generating asset embeddings."""
 
-    embedding: Optional[List[float]] = None
-    text: Optional[str] = None
+    embedding: list[float] | None = None
+    text: str | None = None
     use_asset_text: bool = False
     model: str = "embeddinggemma"
     dim: int = 768
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: dict[str, Any] | None = None
 
 
 class AssetEmbeddingInfo(BaseModel):
@@ -303,15 +309,15 @@ class AssetEmbeddingInfo(BaseModel):
     embedding_model: str
     embedding_dim: int
     embedding_ts: datetime
-    metadata: Optional[Dict[str, Any]] = None
-    vector_length: Optional[int] = None
+    metadata: dict[str, Any] | None = None
+    vector_length: int | None = None
     generated: bool = False
 
 
 class AssetSearchRequest(BaseModel):
     """Semantic search request over stored asset embeddings."""
 
-    embedding: List[float]
+    embedding: list[float]
     model: str = "embeddinggemma"
     dim: int = 768
     top_k: int = Field(10, ge=1, le=200)
@@ -321,10 +327,10 @@ class AssetSearchHit(BaseModel):
     """Single asset search result with similarity score."""
 
     asset_id: str
-    media_type: Optional[str] = None
-    title: Optional[str] = None
-    description: Optional[str] = None
-    origin_url: Optional[str] = None
+    media_type: str | None = None
+    title: str | None = None
+    description: str | None = None
+    origin_url: str | None = None
     score: float
 
 
@@ -332,15 +338,15 @@ class AssetSearchResponse(BaseModel):
     """Container for semantic asset search results."""
 
     total: int
-    items: List[AssetSearchHit]
+    items: list[AssetSearchHit]
 
 
 class AssetLinkRequest(BaseModel):
     """Request payload for linking an asset to verse references."""
 
-    verse_ids: List[str] = Field(..., min_length=1)
+    verse_ids: list[str] = Field(..., min_length=1)
     relation: str = Field("related", min_length=1, max_length=64)
-    chunk_id: Optional[str] = None
+    chunk_id: str | None = None
 
 
 class AssetLinkResponse(BaseModel):
@@ -362,8 +368,8 @@ class AssetVerseLink(BaseModel):
     """Detailed representation of an asset-to-verse relationship."""
 
     verse_id: str
-    relation: Optional[str] = None
-    chunk_id: Optional[str] = None
+    relation: str | None = None
+    chunk_id: str | None = None
     translation_code: str
     book_number: int
     chapter_number: int
@@ -378,12 +384,13 @@ class AssetLinkListResponse(BaseModel):
 
     asset_id: str
     total: int
-    items: List[AssetVerseLink]
+    items: list[AssetVerseLink]
 
 
 # ============================================================================
 # Batch Processing Models - High-volume verse operations
 # ============================================================================
+
 
 class CanonicalVerseRef(BaseModel):
     """Canonical verse reference without translation."""
@@ -397,50 +404,50 @@ class CanonicalVerseRef(BaseModel):
 class BatchVerseRequest(BaseModel):
     """Request payload for batch verse retrieval."""
 
-    verse_ids: List[str] = Field(..., min_length=1, max_length=500)
+    verse_ids: list[str] = Field(..., min_length=1, max_length=500)
 
 
 class BatchVerseResponse(BaseModel):
     """Response containing requested verses and missing IDs."""
 
-    verses: List[Verse]
-    missing_ids: List[str]
+    verses: list[Verse]
+    missing_ids: list[str]
 
 
 class TranslationVerseEntry(BaseModel):
     """Single verse entry in a translation comparison."""
 
     translation_code: str
-    verse_id: Optional[str] = None
-    text: Optional[str] = None
+    verse_id: str | None = None
+    text: str | None = None
 
 
 class TranslationComparisonItem(BaseModel):
     """Comparison of a single verse across multiple translations."""
 
     reference: CanonicalVerseRef
-    translations: List[TranslationVerseEntry]
-    missing_translations: List[str]
+    translations: list[TranslationVerseEntry]
+    missing_translations: list[str]
 
 
 class TranslationComparisonRequest(BaseModel):
     """Request for comparing verses across translations."""
 
-    references: List[CanonicalVerseRef] = Field(..., min_length=1, max_length=200)
-    translations: List[str] = Field(..., min_length=1, max_length=25)
+    references: list[CanonicalVerseRef] = Field(..., min_length=1, max_length=200)
+    translations: list[str] = Field(..., min_length=1, max_length=25)
 
 
 class TranslationComparisonResponse(BaseModel):
     """Response containing translation comparisons."""
 
-    items: List[TranslationComparisonItem]
+    items: list[TranslationComparisonItem]
 
 
 class EmbeddingVector(BaseModel):
     """Embedding vector with metadata."""
 
     verse_id: str
-    embedding: List[float]
+    embedding: list[float]
     embedding_model: str
     embedding_dim: int
 
@@ -448,15 +455,15 @@ class EmbeddingVector(BaseModel):
 class EmbeddingLookupRequest(BaseModel):
     """Request for looking up verse embeddings."""
 
-    verse_ids: List[str] = Field(..., min_length=1, max_length=500)
+    verse_ids: list[str] = Field(..., min_length=1, max_length=500)
     model: str = "embeddinggemma"
 
 
 class EmbeddingLookupResponse(BaseModel):
     """Response containing verse embeddings."""
 
-    results: List[EmbeddingVector]
-    missing_ids: List[str]
+    results: list[EmbeddingVector]
+    missing_ids: list[str]
 
 
 # ============================================================================
@@ -480,8 +487,8 @@ class SessionCitationBase(BaseModel):
 
     source_type: str
     source_id: str
-    snippet: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
+    snippet: str | None = None
+    metadata: dict[str, Any] | None = None
 
     @field_validator("source_type", "source_id")
     @classmethod
@@ -526,8 +533,8 @@ class SessionMessageAppendRequest(BaseModel):
 
     role: Literal["system", "user", "assistant", "tool"]
     content: str
-    metadata: Optional[Dict[str, Any]] = None
-    citations: List[SessionCitationCreate] = Field(default_factory=list)
+    metadata: dict[str, Any] | None = None
+    citations: list[SessionCitationCreate] = Field(default_factory=list)
 
     @field_validator("content")
     @classmethod
@@ -550,7 +557,7 @@ class SessionMessage(SessionMessageAppendRequest):
     message_id: int
     session_id: str
     created_at: datetime
-    citations: List[SessionCitation] = Field(default_factory=list)
+    citations: list[SessionCitation] = Field(default_factory=list)
 
 
 class SessionMessageCreate(SessionMessageAppendRequest):
@@ -573,14 +580,14 @@ class SessionMessageUpdate(BaseModel):
         citations: Optional replacement citation descriptors for the message.
     """
 
-    role: Optional[Literal["system", "user", "assistant", "tool"]] = None
-    content: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
-    citations: Optional[List[SessionCitationCreate]] = None
+    role: Literal["system", "user", "assistant", "tool"] | None = None
+    content: str | None = None
+    metadata: dict[str, Any] | None = None
+    citations: list[SessionCitationCreate] | None = None
 
     @field_validator("content")
     @classmethod
-    def _validate_content(cls, value: Optional[str]) -> Optional[str]:
+    def _validate_content(cls, value: str | None) -> str | None:
         if value is not None and not value.strip():
             raise ValueError("content must not be empty")
         return value
@@ -601,35 +608,34 @@ class SessionContextResponse(BaseModel):
     total: int
     limit: int
     offset: int
-    items: List[SessionMessage]
+    items: list[SessionMessage]
 
 
 # ============================================================================
 # Chunk Search Models - Sliding window embeddings
 # ============================================================================
 
+
 class ChunkSearchQuery(BaseModel):
     """Chunk-based semantic search query parameters."""
 
-    embedding: List[float] = Field(
+    embedding: list[float] = Field(
         ..., min_length=768, max_length=4096, description="Query embedding vector"
     )
     model: str = Field(
         "embeddinggemma", description="Embedding model identifier used to generate the vector"
     )
     dim: int = Field(768, ge=1, le=4096, description="Embedding dimensionality")
-    translation: Optional[str] = Field(
+    translation: str | None = Field(
         None, description="Restrict results to a specific translation code"
     )
-    book_number: Optional[int] = Field(
+    book_number: int | None = Field(
         None, ge=1, le=200, description="Restrict results to a canonical book number"
     )
-    testament: Optional[Literal["Old", "New"]] = Field(
+    testament: Literal["Old", "New"] | None = Field(
         None, description="Restrict results by testament"
     )
-    window_size: Optional[int] = Field(
-        None, ge=1, le=500, description="Filter by chunk window size"
-    )
+    window_size: int | None = Field(None, ge=1, le=500, description="Filter by chunk window size")
     top_k: int = Field(50, ge=1, le=500, description="Maximum number of results to return")
     offset: int = Field(0, ge=0, description="Pagination offset for large result sets")
     include_context: bool = Field(
@@ -638,7 +644,7 @@ class ChunkSearchQuery(BaseModel):
 
     @field_validator("embedding")
     @classmethod
-    def validate_embedding_length(cls, v: List[float], info: Any) -> List[float]:
+    def validate_embedding_length(cls, v: list[float], info: Any) -> list[float]:
         """Ensure the embedding vector length matches the declared dimension."""
 
         dim = info.data.get("dim", 768)
@@ -659,12 +665,12 @@ class ChunkHit(BaseModel):
     verse_end: int
     text: str
     score: float = Field(..., ge=0.0, le=1.0, description="Cosine similarity score")
-    window_size: Optional[int] = Field(None, description="Size of the chunking window")
-    stride: Optional[int] = Field(None, description="Stride used when generating the chunk")
-    context_before: Optional[str] = Field(
+    window_size: int | None = Field(None, description="Size of the chunking window")
+    stride: int | None = Field(None, description="Stride used when generating the chunk")
+    context_before: str | None = Field(
         None, description="Concatenated verses before the chunk if context is requested"
     )
-    context_after: Optional[str] = Field(
+    context_after: str | None = Field(
         None, description="Concatenated verses after the chunk if context is requested"
     )
 
@@ -673,8 +679,8 @@ class ChunkSearchResponse(BaseModel):
     """Container for chunk search results and execution metadata."""
 
     total: int = Field(..., ge=0, description="Total matching chunks for the given filters")
-    items: List[ChunkHit]
-    query_metadata: Dict[str, Any] = Field(
+    items: list[ChunkHit]
+    query_metadata: dict[str, Any] = Field(
         default_factory=dict,
         description="Metadata describing how the query was executed (limit, offset, clipping)",
     )
@@ -684,10 +690,11 @@ class ChunkSearchResponse(BaseModel):
 # Analytics Models - Query telemetry and usage metrics
 # ============================================================================
 
+
 class ModeCount(BaseModel):
     """Search mode distribution within a time window."""
 
-    mode: Optional[str]
+    mode: str | None
     count: int
     percentage: float
 
@@ -705,9 +712,9 @@ class QueryCounts(BaseModel):
 
     total: int
     unique_users: int
-    average_latency_ms: Optional[float]
-    mode_breakdown: List[ModeCount]
-    top_queries: List[TopQuery]
+    average_latency_ms: float | None
+    mode_breakdown: list[ModeCount]
+    top_queries: list[TopQuery]
 
 
 class TrendPoint(BaseModel):
@@ -722,13 +729,13 @@ class QueryTrends(BaseModel):
     """Query trend time-series for analytics dashboards."""
 
     interval: Literal["hour", "day"]
-    points: List[TrendPoint]
+    points: list[TrendPoint]
 
 
 class TranslationUsage(BaseModel):
     """Usage metric for a translation within the time window."""
 
-    translation_code: Optional[str]
+    translation_code: str | None
     count: int
     percentage: float
 
@@ -745,8 +752,8 @@ class BookUsage(BaseModel):
 class UsageStats(BaseModel):
     """Aggregated usage statistics for translations and books."""
 
-    translations: List[TranslationUsage]
-    books: List[BookUsage]
+    translations: list[TranslationUsage]
+    books: list[BookUsage]
 
 
 class AnalyticsOverview(BaseModel):

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Sequence, Tuple
+from collections.abc import Sequence
+from typing import Any
 
 import asyncpg
 
@@ -21,7 +22,7 @@ class SearchRepository:
         translation: str | None,
         limit: int,
         offset: int,
-    ) -> Tuple[int, List[dict[str, Any]]]:
+    ) -> tuple[int, list[dict[str, Any]]]:
         """Execute full-text search query."""
         where_extra = "AND v.translation_code = $3" if translation else ""
         param_count = 3 if translation else 2
@@ -49,7 +50,7 @@ class SearchRepository:
           ) AS items
         FROM ranked;
         """
-        args: List[Any] = [dictionary, query]
+        args: list[Any] = [dictionary, query]
         if translation:
             args.append(translation)
         args.extend([limit, offset])
@@ -68,10 +69,10 @@ class SearchRepository:
         dim: int,
         translation: str | None,
         limit: int,
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Execute vector similarity search."""
         where_parts = ["e.embedding_model = $1", "e.embedding_dim = $2"]
-        params: List[Any] = [model, dim]
+        params: list[Any] = [model, dim]
         if translation:
             where_parts.append(f"v.translation_code = ${len(params) + 1}")
             params.append(translation)
@@ -111,9 +112,9 @@ class SearchRepository:
         vector_k: int,
         k_rrf: int,
         top_k: int,
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Execute hybrid Reciprocal Rank Fusion search."""
-        params: List[Any] = []
+        params: list[Any] = []
         fts_cte = "SELECT NULL::text AS verse_id, NULL::bigint AS rnk WHERE FALSE"
         if query:
             fts_filter = f"AND v.translation_code = ${len(params) + 3}" if translation else ""

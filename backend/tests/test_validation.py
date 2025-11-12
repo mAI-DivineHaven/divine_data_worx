@@ -34,9 +34,7 @@ def sample_manifest(tmp_path: Path) -> ManifestMetadata:
         },
         "index_plan": {
             "hybrid": {
-                "fusion": {
-                    "graph_expansion": {"enabled": True, "max_per_hit": 3, "weight": 0.1}
-                }
+                "fusion": {"graph_expansion": {"enabled": True, "max_per_hit": 3, "weight": 0.1}}
             }
         },
         "batches": [],
@@ -84,7 +82,9 @@ def test_derive_metrics_counts_non_empty_texts(translation_payload: Path) -> Non
     assert "1:1:1:" in metrics.canonical_keys
 
 
-def test_validate_verse_coverage_flags_missing_translation(sample_manifest: ManifestMetadata) -> None:
+def test_validate_verse_coverage_flags_missing_translation(
+    sample_manifest: ManifestMetadata,
+) -> None:
     metrics = {"NIV": VerseMetrics("NIV", verse_count=10, non_empty_text_count=10)}
     result = validate_verse_coverage(sample_manifest, metrics)
     assert not result.passed

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, Iterable, List, Sequence
+from collections.abc import Iterable, Sequence
 
 from neo4j import AsyncResult, AsyncSession
 
@@ -17,7 +17,7 @@ class GraphExpansionService:
 
     async def parallels_for(
         self, verse_ids: Sequence[str], *, limit: int | None = None
-    ) -> Dict[str, GraphExpansion]:
+    ) -> dict[str, GraphExpansion]:
         """Return graph expansions for a collection of verse identifiers."""
 
         unique_ids = _dedupe_preserve_order(verse_ids)
@@ -55,9 +55,9 @@ class GraphExpansionService:
         result: AsyncResult = await self._session.run(cypher, verse_ids=unique_ids)
         records = await result.data()
 
-        expansions: Dict[str, GraphExpansion] = {}
+        expansions: dict[str, GraphExpansion] = {}
         for record in records:
-            renditions_raw: List[dict] = record.get("renditions") or []
+            renditions_raw: list[dict] = record.get("renditions") or []
             if limit is not None and limit >= 0:
                 renditions_raw = renditions_raw[:limit]
             renditions = [
@@ -78,9 +78,9 @@ class GraphExpansionService:
         return expansions
 
 
-def _dedupe_preserve_order(items: Iterable[str]) -> List[str]:
+def _dedupe_preserve_order(items: Iterable[str]) -> list[str]:
     seen: set[str] = set()
-    ordered: List[str] = []
+    ordered: list[str] = []
     for item in items:
         if item not in seen:
             seen.add(item)

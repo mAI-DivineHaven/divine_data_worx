@@ -27,13 +27,12 @@ Example Usage:
     ```
 """
 
-from typing import List
 import asyncpg
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from ..db.postgres_async import get_pg
-from ..models import Verse, VerseLite, Book, Chapter, Translation
-from ..services.verses import VerseService, VerseNotFoundError
+from ..models import Book, Chapter, Translation, Verse, VerseLite
+from ..services.verses import VerseNotFoundError, VerseService
 
 router = APIRouter(prefix="/verses", tags=["verses"])
 
@@ -46,10 +45,11 @@ def get_verse_service(conn: asyncpg.Connection = Depends(get_pg)) -> VerseServic
 # NOTE: Specific routes MUST be defined BEFORE the dynamic /{verse_id} route
 # to prevent FastAPI from matching "translations", "books", etc. as verse IDs
 
-@router.get("/translations", response_model=List[Translation])
+
+@router.get("/translations", response_model=list[Translation])
 async def list_translations(
-    service: VerseService = Depends(get_verse_service)
-) -> List[Translation]:
+    service: VerseService = Depends(get_verse_service),
+) -> list[Translation]:
     """
     List all available Bible translations.
 
@@ -87,11 +87,11 @@ async def list_translations(
     return translations
 
 
-@router.get("/books", response_model=List[Book])
+@router.get("/books", response_model=list[Book])
 async def list_books(
     translation: str = Query(..., description="Translation code (e.g., NIV)"),
-    service: VerseService = Depends(get_verse_service)
-) -> List[Book]:
+    service: VerseService = Depends(get_verse_service),
+) -> list[Book]:
     """
     List all books in a specific translation.
 
@@ -135,12 +135,12 @@ async def list_books(
     return books
 
 
-@router.get("/chapters", response_model=List[Chapter])
+@router.get("/chapters", response_model=list[Chapter])
 async def list_chapters(
     translation: str = Query(..., description="Translation code"),
     book_number: int = Query(..., description="Book number"),
-    service: VerseService = Depends(get_verse_service)
-) -> List[Chapter]:
+    service: VerseService = Depends(get_verse_service),
+) -> list[Chapter]:
     """
     List all chapters in a specific book.
 
@@ -231,15 +231,17 @@ async def get_verse(
     return verse
 
 
-@router.get("", response_model=List[VerseLite])
+@router.get("", response_model=list[VerseLite])
 async def list_verses(
     translation: str = Query(..., description="Translation code (e.g., NIV, ESV)"),
-    book_number: int = Query(..., ge=1, le=200, description="Book number (1-66 for Protestant canon)"),
+    book_number: int = Query(
+        ..., ge=1, le=200, description="Book number (1-66 for Protestant canon)"
+    ),
     chapter_number: int = Query(..., ge=1, description="Chapter number"),
     limit: int = Query(100, ge=1, le=500, description="Maximum verses to return"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
     service: VerseService = Depends(get_verse_service),
-) -> List[VerseLite]:
+) -> list[VerseLite]:
     """
     List verses in a specific chapter with pagination.
 

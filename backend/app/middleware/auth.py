@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Iterable, Optional
+from collections.abc import Iterable
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -29,9 +29,9 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
         app,
         secret_key: str,
         algorithm: str = "HS256",
-        audience: Optional[str] = None,
-        issuer: Optional[str] = None,
-        exempt_paths: Optional[Iterable[str]] = None,
+        audience: str | None = None,
+        issuer: str | None = None,
+        exempt_paths: Iterable[str] | None = None,
     ) -> None:
         super().__init__(app)
         self.secret_key = secret_key

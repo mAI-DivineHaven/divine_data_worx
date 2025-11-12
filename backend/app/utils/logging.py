@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 try:
     from opentelemetry import trace
@@ -23,8 +23,8 @@ class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:  # noqa: D401
         """Format the log record as a JSON payload."""
 
-        base: Dict[str, Any] = {
-            "timestamp": datetime.fromtimestamp(record.created, tz=timezone.utc)
+        base: dict[str, Any] = {
+            "timestamp": datetime.fromtimestamp(record.created, tz=UTC)
             .isoformat()
             .replace("+00:00", "Z"),
             "level": record.levelname,
@@ -87,7 +87,7 @@ def _json_default(value: Any) -> Any:
     return str(value)
 
 
-def configure_logging(level: str = "INFO", service_name: Optional[str] = None) -> None:
+def configure_logging(level: str = "INFO", service_name: str | None = None) -> None:
     """Configure application-wide structured logging."""
 
     logging_level = getattr(logging, level.upper(), logging.INFO)

@@ -7,7 +7,6 @@ Tests cover:
 - POST /v1/search/hybrid - Hybrid RRF search
 """
 
-import pytest
 from fastapi.testclient import TestClient
 
 
@@ -16,13 +15,7 @@ class TestFullTextSearch:
 
     def test_fts_basic_search(self, client: TestClient):
         """Should return results for simple text query."""
-        response = client.post(
-            "/v1/search/fts",
-            json={
-                "q": "beginning",
-                "limit": 10
-            }
-        )
+        response = client.post("/v1/search/fts", json={"q": "beginning", "limit": 10})
 
         assert response.status_code == 200
         data = response.json()
@@ -33,12 +26,7 @@ class TestFullTextSearch:
     def test_fts_with_translation_filter(self, client: TestClient):
         """Should filter results by translation."""
         response = client.post(
-            "/v1/search/fts",
-            json={
-                "q": "God",
-                "translation": "NIV",
-                "limit": 5
-            }
+            "/v1/search/fts", json={"q": "God", "translation": "NIV", "limit": 5}
         )
 
         assert response.status_code == 200
@@ -52,23 +40,9 @@ class TestFullTextSearch:
 
     def test_fts_pagination(self, client: TestClient):
         """Should respect limit and offset parameters."""
-        response1 = client.post(
-            "/v1/search/fts",
-            json={
-                "q": "love",
-                "limit": 5,
-                "offset": 0
-            }
-        )
+        response1 = client.post("/v1/search/fts", json={"q": "love", "limit": 5, "offset": 0})
 
-        response2 = client.post(
-            "/v1/search/fts",
-            json={
-                "q": "love",
-                "limit": 5,
-                "offset": 5
-            }
-        )
+        response2 = client.post("/v1/search/fts", json={"q": "love", "limit": 5, "offset": 5})
 
         assert response1.status_code == 200
         assert response2.status_code == 200
@@ -84,13 +58,7 @@ class TestFullTextSearch:
 
     def test_fts_empty_query(self, client: TestClient):
         """Should handle empty query string."""
-        response = client.post(
-            "/v1/search/fts",
-            json={
-                "q": "",
-                "limit": 10
-            }
-        )
+        response = client.post("/v1/search/fts", json={"q": "", "limit": 10})
 
         # Should return 422 validation error or 400
         assert response.status_code in [400, 422]
@@ -98,35 +66,20 @@ class TestFullTextSearch:
     def test_fts_limit_boundaries(self, client: TestClient):
         """Should enforce limit boundaries (1-500)."""
         # Test minimum
-        response_min = client.post(
-            "/v1/search/fts",
-            json={"q": "beginning", "limit": 1}
-        )
+        response_min = client.post("/v1/search/fts", json={"q": "beginning", "limit": 1})
         assert response_min.status_code == 200
 
         # Test maximum
-        response_max = client.post(
-            "/v1/search/fts",
-            json={"q": "beginning", "limit": 500}
-        )
+        response_max = client.post("/v1/search/fts", json={"q": "beginning", "limit": 500})
         assert response_max.status_code == 200
 
         # Test out of bounds
-        response_invalid = client.post(
-            "/v1/search/fts",
-            json={"q": "beginning", "limit": 1000}
-        )
+        response_invalid = client.post("/v1/search/fts", json={"q": "beginning", "limit": 1000})
         assert response_invalid.status_code == 422
 
     def test_fts_response_structure(self, client: TestClient):
         """Should return properly structured response."""
-        response = client.post(
-            "/v1/search/fts",
-            json={
-                "q": "faith",
-                "limit": 3
-            }
-        )
+        response = client.post("/v1/search/fts", json={"q": "faith", "limit": 3})
 
         assert response.status_code == 200
         data = response.json()
@@ -153,12 +106,7 @@ class TestVectorSearch:
         """Should perform vector similarity search."""
         response = client.post(
             "/v1/search/vector",
-            json={
-                "embedding": [0.1] * 768,
-                "model": "embeddinggemma",
-                "dim": 768,
-                "top_k": 5
-            }
+            json={"embedding": [0.1] * 768, "model": "embeddinggemma", "dim": 768, "top_k": 5},
         )
 
         assert response.status_code == 200
@@ -175,8 +123,8 @@ class TestVectorSearch:
                 "embedding": [0.1] * 384,  # Wrong dimension
                 "model": "embeddinggemma",
                 "dim": 768,
-                "top_k": 5
-            }
+                "top_k": 5,
+            },
         )
 
         assert response.status_code == 422
@@ -190,8 +138,8 @@ class TestVectorSearch:
                 "model": "embeddinggemma",
                 "dim": 768,
                 "translation": "ESV",
-                "top_k": 5
-            }
+                "top_k": 5,
+            },
         )
 
         assert response.status_code == 200
@@ -206,35 +154,20 @@ class TestVectorSearch:
         """Should enforce top_k limits (1-500)."""
         # Valid top_k
         response_valid = client.post(
-            "/v1/search/vector",
-            json={
-                "embedding": [0.1] * 768,
-                "dim": 768,
-                "top_k": 50
-            }
+            "/v1/search/vector", json={"embedding": [0.1] * 768, "dim": 768, "top_k": 50}
         )
         assert response_valid.status_code == 200
 
         # Invalid top_k (too high)
         response_invalid = client.post(
-            "/v1/search/vector",
-            json={
-                "embedding": [0.1] * 768,
-                "dim": 768,
-                "top_k": 1000
-            }
+            "/v1/search/vector", json={"embedding": [0.1] * 768, "dim": 768, "top_k": 1000}
         )
         assert response_invalid.status_code == 422
 
     def test_vector_search_response_structure(self, client: TestClient):
         """Should return properly structured response with similarity scores."""
         response = client.post(
-            "/v1/search/vector",
-            json={
-                "embedding": [0.1] * 768,
-                "dim": 768,
-                "top_k": 3
-            }
+            "/v1/search/vector", json={"embedding": [0.1] * 768, "dim": 768, "top_k": 3}
         )
 
         assert response.status_code == 200
@@ -267,8 +200,8 @@ class TestHybridSearch:
                 "vector_k": 50,
                 "fts_k": 50,
                 "k_rrf": 60,
-                "top_k": 10
-            }
+                "top_k": 10,
+            },
         )
 
         assert response.status_code == 200
@@ -280,13 +213,7 @@ class TestHybridSearch:
     def test_hybrid_search_text_only(self, client: TestClient):
         """Should work with text query only."""
         response = client.post(
-            "/v1/search/hybrid",
-            json={
-                "q": "love",
-                "vector_k": 50,
-                "fts_k": 50,
-                "top_k": 10
-            }
+            "/v1/search/hybrid", json={"q": "love", "vector_k": 50, "fts_k": 50, "top_k": 10}
         )
 
         assert response.status_code == 200
@@ -297,13 +224,7 @@ class TestHybridSearch:
         """Should work with vector query only."""
         response = client.post(
             "/v1/search/hybrid",
-            json={
-                "embedding": [0.1] * 768,
-                "dim": 768,
-                "vector_k": 50,
-                "fts_k": 50,
-                "top_k": 10
-            }
+            json={"embedding": [0.1] * 768, "dim": 768, "vector_k": 50, "fts_k": 50, "top_k": 10},
         )
 
         assert response.status_code == 200
@@ -312,14 +233,7 @@ class TestHybridSearch:
 
     def test_hybrid_search_no_query(self, client: TestClient):
         """Should reject request with neither text nor vector."""
-        response = client.post(
-            "/v1/search/hybrid",
-            json={
-                "vector_k": 50,
-                "fts_k": 50,
-                "top_k": 10
-            }
-        )
+        response = client.post("/v1/search/hybrid", json={"vector_k": 50, "fts_k": 50, "top_k": 10})
 
         # Should require at least one query type
         assert response.status_code in [400, 422]
@@ -333,8 +247,8 @@ class TestHybridSearch:
                 "embedding": [0.1] * 768,
                 "dim": 768,
                 "k_rrf": 100,  # Different RRF constant
-                "top_k": 5
-            }
+                "top_k": 5,
+            },
         )
 
         assert response.status_code == 200
@@ -343,12 +257,7 @@ class TestHybridSearch:
         """Should return properly structured RRF-scored results."""
         response = client.post(
             "/v1/search/hybrid",
-            json={
-                "q": "hope",
-                "embedding": [0.1] * 768,
-                "dim": 768,
-                "top_k": 5
-            }
+            json={"q": "hope", "embedding": [0.1] * 768, "dim": 768, "top_k": 5},
         )
 
         assert response.status_code == 200
@@ -371,13 +280,7 @@ class TestSearchEdgeCases:
 
     def test_search_special_characters(self, client: TestClient):
         """Should handle special characters in search queries."""
-        response = client.post(
-            "/v1/search/fts",
-            json={
-                "q": "God's",
-                "limit": 5
-            }
-        )
+        response = client.post("/v1/search/fts", json={"q": "God's", "limit": 5})
 
         # Should handle gracefully
         assert response.status_code in [200, 400]
@@ -386,13 +289,7 @@ class TestSearchEdgeCases:
         """Should handle very long search queries."""
         long_query = "word " * 1000
 
-        response = client.post(
-            "/v1/search/fts",
-            json={
-                "q": long_query,
-                "limit": 5
-            }
-        )
+        response = client.post("/v1/search/fts", json={"q": long_query, "limit": 5})
 
         # Should handle gracefully (accept or reject, but not crash)
         assert response.status_code in [200, 400, 422]
@@ -400,11 +297,7 @@ class TestSearchEdgeCases:
     def test_search_unicode_characters(self, client: TestClient):
         """Should handle Unicode characters in queries."""
         response = client.post(
-            "/v1/search/fts",
-            json={
-                "q": "αγάπη",  # Greek for "love"
-                "limit": 5
-            }
+            "/v1/search/fts", json={"q": "αγάπη", "limit": 5}  # Greek for "love"
         )
 
         # Should handle gracefully

@@ -4,7 +4,6 @@ Handles query embedding generation via Ollama.
 """
 
 import asyncio
-from typing import List
 
 import httpx
 
@@ -25,7 +24,7 @@ class EmbeddingsService:
         concurrency = max(1, max_concurrency)
         self._semaphore = asyncio.Semaphore(concurrency)
 
-    async def embed_async(self, text: str) -> List[float]:
+    async def embed_async(self, text: str) -> list[float]:
         """
         Generate embedding for a single text asynchronously.
 
@@ -55,7 +54,7 @@ class EmbeddingsService:
             else:
                 raise ValueError(f"Unexpected Ollama response format: {data.keys()}")
 
-    def embed_sync(self, text: str) -> List[float]:
+    def embed_sync(self, text: str) -> list[float]:
         """
         Generate embedding for a single text synchronously.
 
@@ -84,7 +83,7 @@ class EmbeddingsService:
             else:
                 raise ValueError(f"Unexpected Ollama response format: {data.keys()}")
 
-    async def embed_batch_async(self, texts: List[str]) -> List[List[float]]:
+    async def embed_batch_async(self, texts: list[str]) -> list[list[float]]:
         """
         Generate embeddings for multiple texts asynchronously.
 
@@ -94,7 +93,8 @@ class EmbeddingsService:
         Returns:
             List of embedding vectors (one per text)
         """
-        async def _embed(text: str) -> List[float]:
+
+        async def _embed(text: str) -> list[float]:
             async with self._semaphore:
                 return await self.embed_async(text)
 
@@ -114,9 +114,7 @@ class EmbeddingsService:
                 if response.status_code == 200:
                     data = response.json()
                     models = [m["name"] for m in data.get("models", [])]
-                    return self.model in models or any(
-                        self.model in m for m in models
-                    )
+                    return self.model in models or any(self.model in m for m in models)
                 return False
         except Exception:
             return False

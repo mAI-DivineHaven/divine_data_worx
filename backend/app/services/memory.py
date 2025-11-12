@@ -9,8 +9,6 @@ an interaction.
 
 from __future__ import annotations
 
-from typing import List, Optional
-
 import asyncpg
 
 from ..models import (
@@ -69,7 +67,7 @@ class SessionMemoryService:
                 content=create_payload.content,
                 metadata=create_payload.metadata,
             )
-            citations: List[SessionCitation] = await self._repo.add_citations(
+            citations: list[SessionCitation] = await self._repo.add_citations(
                 message.message_id,
                 create_payload.citations,
             )
@@ -156,18 +154,14 @@ class SessionMemoryService:
         async with self._conn.transaction():
             existing = await self._repo.get_message(message_id)
             if not existing or existing.session_id != session_id:
-                raise LookupError(
-                    f"message {message_id} not found for session {session_id}"
-                )
+                raise LookupError(f"message {message_id} not found for session {session_id}")
 
             fields = payload.model_dump(exclude_unset=True, exclude={"citations"})
-            updated: Optional[SessionMessage]
+            updated: SessionMessage | None
             if fields:
                 updated = await self._repo.update_message(message_id, fields=fields)
                 if not updated:
-                    raise LookupError(
-                        f"message {message_id} not found for session {session_id}"
-                    )
+                    raise LookupError(f"message {message_id} not found for session {session_id}")
             else:
                 updated = existing
 
@@ -179,7 +173,7 @@ class SessionMemoryService:
             else:
                 citations = await self._repo.get_citations_for_message(message_id)
 
-        citations_list: List[SessionCitation] = list(citations)
+        citations_list: list[SessionCitation] = list(citations)
         return updated.model_copy(update={"citations": citations_list})
 
     async def delete_message(self, session_id: str, message_id: int) -> None:

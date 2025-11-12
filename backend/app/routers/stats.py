@@ -29,7 +29,6 @@ Response Format:
     ```
 """
 
-from typing import List
 import asyncpg
 from fastapi import APIRouter, Depends
 
@@ -45,10 +44,10 @@ def get_stats_service(conn: asyncpg.Connection = Depends(get_pg)) -> StatsServic
     return StatsService(conn)
 
 
-@router.get("/embedding_coverage", response_model=List[EmbeddingCoverage])
+@router.get("/embedding_coverage", response_model=list[EmbeddingCoverage])
 async def embedding_coverage(
     service: StatsService = Depends(get_stats_service),
-) -> List[dict]:
+) -> list[dict]:
     """
     Get embedding coverage statistics per translation.
 

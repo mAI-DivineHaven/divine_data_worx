@@ -8,7 +8,8 @@ service or routing layers.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 import asyncpg
 
@@ -39,7 +40,7 @@ class SessionMemoryRepository:
         session_id: str,
         role: str,
         content: str,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> SessionMessage:
         """Insert a new message row and return the hydrated model."""
 
@@ -60,8 +61,8 @@ class SessionMemoryRepository:
         self,
         message_id: int,
         *,
-        fields: Dict[str, Any],
-    ) -> Optional[SessionMessage]:
+        fields: dict[str, Any],
+    ) -> SessionMessage | None:
         """Apply partial updates to a message record.
 
         Args:
@@ -76,7 +77,7 @@ class SessionMemoryRepository:
             return await self.get_message(message_id)
 
         assignments = []
-        values: List[object] = [message_id]
+        values: list[object] = [message_id]
         for idx, (column, value) in enumerate(fields.items(), start=1):
             assignments.append(f"{column} = ${idx + 1}")
             values.append(value)
@@ -87,12 +88,14 @@ class SessionMemoryRepository:
                SET {assignments}
              WHERE message_id = $1
          RETURNING message_id, session_id, role, content, metadata, created_at
-            """.format(assignments=", ".join(assignments)),
+            """.format(
+                assignments=", ".join(assignments)
+            ),
             *values,
         )
         return self._row_to_message(row, []) if row else None
 
-    async def get_message(self, message_id: int) -> Optional[SessionMessage]:
+    async def get_message(self, message_id: int) -> SessionMessage | None:
         """Return a single message along with its citation trail."""
 
         row = await self._conn.fetchrow(
@@ -115,7 +118,7 @@ class SessionMemoryRepository:
         *,
         limit: int,
         offset: int,
-    ) -> List[SessionMessage]:
+    ) -> list[SessionMessage]:
         """List messages for a session with pagination semantics."""
 
         rows = await self._conn.fetch(
@@ -135,10 +138,7 @@ class SessionMemoryRepository:
 
         message_ids = [row["message_id"] for row in rows]
         citations_map = await self.get_citations_for_messages(message_ids)
-        return [
-            self._row_to_message(row, citations_map.get(row["message_id"], []))
-            for row in rows
-        ]
+        return [self._row_to_message(row, citations_map.get(row["message_id"], [])) for row in rows]
 
     async def count_messages(self, session_id: str) -> int:
         """Count the number of messages stored for a session."""
@@ -174,13 +174,13 @@ class SessionMemoryRepository:
         self,
         message_id: int,
         citations: Sequence[SessionCitationCreate],
-    ) -> List[SessionCitation]:
+    ) -> list[SessionCitation]:
         """Persist a batch of citations for a message."""
 
         if not citations:
             return []
 
-        results: List[SessionCitation] = []
+        results: list[SessionCitation] = []
         for citation in citations:
             row = await self._conn.fetchrow(
                 """
@@ -203,7 +203,7 @@ class SessionMemoryRepository:
         self,
         message_id: int,
         citations: Sequence[SessionCitationCreate],
-    ) -> List[SessionCitation]:
+    ) -> list[SessionCitation]:
         """Replace the citation set for the given message."""
 
         await self._conn.execute(
@@ -212,7 +212,7 @@ class SessionMemoryRepository:
         )
         return await self.add_citations(message_id, citations)
 
-    async def get_citations_for_message(self, message_id: int) -> List[SessionCitation]:
+    async def get_citations_for_message(self, message_id: int) -> list[SessionCitation]:
         """Return all citations referencing the specified message."""
 
         rows = await self._conn.fetch(
@@ -230,7 +230,7 @@ class SessionMemoryRepository:
     async def get_citations_for_messages(
         self,
         message_ids: Sequence[int],
-    ) -> Dict[int, List[SessionCitation]]:
+    ) -> dict[int, list[SessionCitation]]:
         """Return a mapping from message id to citations for bulk lookups."""
 
         if not message_ids:
@@ -246,7 +246,7 @@ class SessionMemoryRepository:
             """,
             list(message_ids),
         )
-        citations: Dict[int, List[SessionCitation]] = {}
+        citations: dict[int, list[SessionCitation]] = {}
         for row in rows:
             citation = self._row_to_citation(row)
             citations.setdefault(citation.message_id, []).append(citation)

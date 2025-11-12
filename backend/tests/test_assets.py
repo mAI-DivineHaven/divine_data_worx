@@ -1,6 +1,5 @@
 """Tests for asset management endpoints."""
 
-import pytest
 from fastapi.testclient import TestClient
 
 
@@ -14,8 +13,8 @@ class TestAssetCRUD:
             json={
                 "media_type": "image/png",
                 "title": "Test Asset",
-                "description": "Test description"
-            }
+                "description": "Test description",
+            },
         )
         assert response.status_code in [200, 201]
         if response.status_code in [200, 201]:
@@ -37,10 +36,7 @@ class TestAssetCRUD:
 
     def test_update_asset(self, client: TestClient):
         """Should update asset or return 404."""
-        response = client.patch(
-            "/v1/assets/test_asset_id",
-            json={"title": "Updated Title"}
-        )
+        response = client.patch("/v1/assets/test_asset_id", json={"title": "Updated Title"})
         assert response.status_code in [200, 404]
 
     def test_delete_asset(self, client: TestClient):
@@ -56,12 +52,7 @@ class TestAssetSearch:
         """Should perform semantic search over assets."""
         response = client.post(
             "/v1/assets/search",
-            json={
-                "embedding": [0.1] * 768,
-                "model": "embeddinggemma",
-                "dim": 768,
-                "top_k": 5
-            }
+            json={"embedding": [0.1] * 768, "model": "embeddinggemma", "dim": 768, "top_k": 5},
         )
         assert response.status_code == 200
         data = response.json()
@@ -81,11 +72,7 @@ class TestAssetEmbeddings:
         """Should set/generate asset embedding."""
         response = client.post(
             "/v1/assets/test_asset_id/embedding",
-            json={
-                "embedding": [0.1] * 768,
-                "model": "embeddinggemma",
-                "dim": 768
-            }
+            json={"embedding": [0.1] * 768, "model": "embeddinggemma", "dim": 768},
         )
         assert response.status_code in [200, 404]
 
@@ -102,10 +89,7 @@ class TestAssetVerseLinks:
         """Should link asset to verses."""
         response = client.post(
             "/v1/assets/test_asset_id/links",
-            json={
-                "verse_ids": ["NIV:1:1:1"],
-                "relation": "illustrates"
-            }
+            json={"verse_ids": ["NIV:1:1:1"], "relation": "illustrates"},
         )
         assert response.status_code in [200, 404]
 

@@ -41,8 +41,9 @@ Example Usage:
     ```
 """
 
-from typing import List, Optional, Any
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
+from typing import Any
+
 import asyncpg
 
 
@@ -63,6 +64,7 @@ class SearchResult:
         testament: Testament classification ("Old" or "New")
         book_name: Human-readable book name
     """
+
     verse_id: str
     translation_code: str
     book_number: int
@@ -71,8 +73,8 @@ class SearchResult:
     suffix: str
     text: str
     score: float
-    testament: Optional[str] = None
-    book_name: Optional[str] = None
+    testament: str | None = None
+    book_name: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
@@ -146,12 +148,12 @@ class SearchService:
 
     async def semantic_search(
         self,
-        embedding: List[float],
+        embedding: list[float],
         translation: str = "NIV",
-        testament: Optional[str] = None,
-        books: Optional[List[int]] = None,
+        testament: str | None = None,
+        books: list[int] | None = None,
         limit: int = 10,
-    ) -> List[SearchResult]:
+    ) -> list[SearchResult]:
         """
         Semantic search using vector similarity with label-based pre-filtering.
 
@@ -175,7 +177,7 @@ class SearchService:
         """
         # Build label filter conditions
         filters = ["v.translation_code = $1"]
-        params: List[Any] = [translation]
+        params: list[Any] = [translation]
 
         if testament:
             testament_label = self._testament_to_label(testament)
@@ -237,11 +239,11 @@ class SearchService:
         self,
         query: str,
         translation: str = "NIV",
-        testament: Optional[str] = None,
-        books: Optional[List[int]] = None,
+        testament: str | None = None,
+        books: list[int] | None = None,
         limit: int = 10,
         use_unaccent: bool = True,
-    ) -> List[SearchResult]:
+    ) -> list[SearchResult]:
         """
         Full-text lexical search using PostgreSQL FTS.
 
@@ -269,7 +271,7 @@ class SearchService:
         """
         # Build filters
         filters = ["v.translation_code = $1"]
-        params: List[Any] = [translation]
+        params: list[Any] = [translation]
 
         if testament:
             filters.append(f"b.testament = ${len(params) + 1}")
@@ -335,16 +337,16 @@ class SearchService:
 
     async def hybrid_search(
         self,
-        embedding: List[float],
+        embedding: list[float],
         query: str,
         translation: str = "NIV",
-        testament: Optional[str] = None,
-        books: Optional[List[int]] = None,
+        testament: str | None = None,
+        books: list[int] | None = None,
         limit: int = 10,
         k: int = 60,
         topk_ann: int = 100,
         topk_fts: int = 100,
-    ) -> List[SearchResult]:
+    ) -> list[SearchResult]:
         """
         Hybrid search using Reciprocal Rank Fusion (RRF) to combine ANN + FTS.
 
@@ -380,7 +382,7 @@ class SearchService:
         # Build label filters for ANN
         ann_filters = ["v.translation_code = $1"]
         fts_filters = ["v.translation_code = $2"]
-        params: List[Any] = [translation, translation]
+        params: list[Any] = [translation, translation]
 
         if testament:
             testament_label = self._testament_to_label(testament)
@@ -410,12 +412,19 @@ class SearchService:
         k_param2 = f"${len(params) + 8}"
         limit_param = f"${len(params) + 9}"
 
-        params.extend([
-            embedding, embedding, topk_ann,  # ANN params
-            query, query, topk_fts,          # FTS params
-            k, k,                             # RRF constants
-            limit,
-        ])
+        params.extend(
+            [
+                embedding,
+                embedding,
+                topk_ann,  # ANN params
+                query,
+                query,
+                topk_fts,  # FTS params
+                k,
+                k,  # RRF constants
+                limit,
+            ]
+        )
 
         sql = f"""
         WITH ann AS (
@@ -491,7 +500,7 @@ class SearchService:
         verse_id: str,
         context_before: int = 2,
         context_after: int = 2,
-    ) -> List[SearchResult]:
+    ) -> list[SearchResult]:
         """
         Retrieve surrounding verses for context using absolute verse indexing.
 

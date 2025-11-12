@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
@@ -25,13 +24,13 @@ class SharePreference(BaseModel):
     """Visibility control for a single profile section."""
 
     scope: ShareScope = ShareScope.PRIVATE
-    allowed_user_ids: List[UUID] = Field(default_factory=list)
+    allowed_user_ids: list[UUID] = Field(default_factory=list)
 
     @field_validator("allowed_user_ids")
     @classmethod
-    def deduplicate(cls, value: List[UUID]) -> List[UUID]:
+    def deduplicate(cls, value: list[UUID]) -> list[UUID]:
         seen = set()
-        deduped: List[UUID] = []
+        deduped: list[UUID] = []
         for item in value:
             if item not in seen:
                 seen.add(item)
@@ -43,16 +42,16 @@ class ProfileSurvey(BaseModel):
     """Structured responses gathered during onboarding."""
 
     display_name: str
-    bio: Optional[str] = None
-    spiritual_background: Optional[str] = None
-    denominational_identity: Optional[str] = None
-    study_focus_topics: List[str] = Field(default_factory=list)
-    study_rhythm: Optional[str] = None
-    guidance_preferences: List[str] = Field(default_factory=list)
-    preferred_translations: List[str] = Field(default_factory=list)
-    prayer_interests: List[str] = Field(default_factory=list)
+    bio: str | None = None
+    spiritual_background: str | None = None
+    denominational_identity: str | None = None
+    study_focus_topics: list[str] = Field(default_factory=list)
+    study_rhythm: str | None = None
+    guidance_preferences: list[str] = Field(default_factory=list)
+    preferred_translations: list[str] = Field(default_factory=list)
+    prayer_interests: list[str] = Field(default_factory=list)
     ai_journal_opt_in: bool = True
-    share_preferences: Dict[str, SharePreference] = Field(default_factory=dict)
+    share_preferences: dict[str, SharePreference] = Field(default_factory=dict)
 
 
 class RegistrationRequest(BaseModel):
@@ -62,7 +61,7 @@ class RegistrationRequest(BaseModel):
     password: str = Field(min_length=8)
     display_name: str = Field(min_length=2)
     role: UserRole = UserRole.MEMBER
-    profile: Optional[ProfileSurvey] = None
+    profile: ProfileSurvey | None = None
 
     @field_validator("email")
     @classmethod
@@ -85,26 +84,26 @@ class ProfileResponse(BaseModel):
     """Profile data filtered according to visibility rules."""
 
     user: UserSummary
-    profile: Optional[ProfileSurvey] = None
-    hidden_fields: List[str] = Field(default_factory=list)
+    profile: ProfileSurvey | None = None
+    hidden_fields: list[str] = Field(default_factory=list)
 
 
 class SharePreferenceUpdate(BaseModel):
     """Partial update to one or more share settings."""
 
-    preferences: Dict[str, SharePreference]
+    preferences: dict[str, SharePreference]
 
 
 class ConversationCreate(BaseModel):
     title: str = Field(min_length=1, max_length=200)
-    metadata: Optional[dict] = None
+    metadata: dict | None = None
 
 
 class ConversationSummary(BaseModel):
     conversation_id: UUID
     user_id: UUID
     title: str
-    metadata: Dict[str, object] = Field(default_factory=dict)
+    metadata: dict[str, object] = Field(default_factory=dict)
     created_at: datetime
     updated_at: datetime
 
@@ -112,7 +111,7 @@ class ConversationSummary(BaseModel):
 class MessageCreate(BaseModel):
     sender_role: str = Field(pattern="^(user|assistant|system)$")
     content: str = Field(min_length=1)
-    metadata: Optional[dict] = None
+    metadata: dict | None = None
 
 
 class MessageRecord(BaseModel):
@@ -120,14 +119,14 @@ class MessageRecord(BaseModel):
     conversation_id: UUID
     sender_role: str
     content: str
-    metadata: Dict[str, object] = Field(default_factory=dict)
+    metadata: dict[str, object] = Field(default_factory=dict)
     created_at: datetime
     sequence: int
 
 
 class ConversationDetail(BaseModel):
     conversation: ConversationSummary
-    messages: List[MessageRecord]
+    messages: list[MessageRecord]
 
 
 __all__ = [

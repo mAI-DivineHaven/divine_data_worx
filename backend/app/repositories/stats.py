@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import List
-
 import asyncpg
 
 from ..models import EmbeddingCoverage
@@ -15,7 +13,7 @@ class StatsRepository:
     def __init__(self, conn: asyncpg.Connection) -> None:
         self._conn = conn
 
-    async def embedding_coverage(self) -> List[EmbeddingCoverage]:
+    async def embedding_coverage(self) -> list[EmbeddingCoverage]:
         """Return embedding coverage metrics per translation."""
         rows = await self._conn.fetch(
             """

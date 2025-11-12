@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import Dict
 
 from dagster import In, Nothing, OpExecutionContext, Out, RetryPolicy, op
 
@@ -17,7 +16,7 @@ DEFAULT_RETRY_POLICY = RetryPolicy(max_retries=3, delay=timedelta(minutes=5))
     retry_policy=DEFAULT_RETRY_POLICY,
     out=Out(dict, description="Validated manifest payload"),
 )
-def manifest_validation_op(context: OpExecutionContext) -> Dict[str, object]:
+def manifest_validation_op(context: OpExecutionContext) -> dict[str, object]:
     """Validate the manifest.json file and emit the manifest payload."""
 
     report: ManifestValidationReport = context.resources.manifest_service.validate_manifest()
@@ -44,8 +43,8 @@ def manifest_validation_op(context: OpExecutionContext) -> Dict[str, object]:
     out=Out(dict, description="Manifest payload propagated to downstream ops"),
 )
 def embedding_generation_op(
-    context: OpExecutionContext, manifest_payload: Dict[str, object]
-) -> Dict[str, object]:
+    context: OpExecutionContext, manifest_payload: dict[str, object]
+) -> dict[str, object]:
     """Trigger embedding generation for the supplied manifest."""
 
     response = context.resources.embedding_service.generate_embeddings(manifest_payload)
@@ -60,8 +59,8 @@ def embedding_generation_op(
     out=Out(dict, description="Manifest payload propagated to graph seeding"),
 )
 def pgvector_index_build_op(
-    context: OpExecutionContext, manifest_payload: Dict[str, object]
-) -> Dict[str, object]:
+    context: OpExecutionContext, manifest_payload: dict[str, object]
+) -> dict[str, object]:
     """Build pgvector indexes based on manifest-provided embedding configuration."""
 
     executed = context.resources.postgres.build_vector_indexes(manifest_payload)
@@ -76,7 +75,7 @@ def pgvector_index_build_op(
     ins={"manifest_payload": In(dict)},
     out=Out(Nothing),
 )
-def neo4j_seeding_op(context: OpExecutionContext, manifest_payload: Dict[str, object]) -> None:
+def neo4j_seeding_op(context: OpExecutionContext, manifest_payload: dict[str, object]) -> None:
     """Seed the Neo4j graph based on manifest metadata."""
 
     created = context.resources.neo4j.seed_graph(manifest_payload)

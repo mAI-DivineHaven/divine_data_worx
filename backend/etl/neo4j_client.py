@@ -35,13 +35,13 @@ Example Usage:
     ```
 """
 
-from typing import Dict, Any, Iterable, List, Set, cast, LiteralString
-from neo4j import GraphDatabase, Driver, Session
+from collections.abc import Iterable
+from typing import Any, LiteralString, cast
+
+from neo4j import Driver, GraphDatabase, Session
 
 
-def _cv_key(
-    book_number: int, chapter_number: int, verse_number: int, suffix: str
-) -> str:
+def _cv_key(book_number: int, chapter_number: int, verse_number: int, suffix: str) -> str:
     """
     Generate canonical verse key from components.
 
@@ -146,10 +146,7 @@ class Neo4jClient:
             constraint_names = [record["name"] for record in session.run(query)]
             for constraint_name in constraint_names:
                 # Use parameterized query to avoid injection
-                session.run(
-                    "DROP CONSTRAINT $name IF EXISTS",
-                    name=constraint_name
-                )
+                session.run("DROP CONSTRAINT $name IF EXISTS", name=constraint_name)
 
     def _session(self) -> Session:
         """
@@ -160,7 +157,7 @@ class Neo4jClient:
         """
         return self.driver.session()
 
-    def merge_batch(self, batch: Iterable[Dict[str, Any]]) -> Set[str]:
+    def merge_batch(self, batch: Iterable[dict[str, Any]]) -> set[str]:
         """
         Batch upsert Translation/Book/Chapter/Verse nodes with relationships.
 
@@ -187,8 +184,8 @@ class Neo4jClient:
             Processes batches of ~5,000 verses efficiently using UNWIND.
             All operations are idempotent (safe to rerun).
         """
-        rows: List[Dict[str, Any]] = []
-        cvks: Set[str] = set()
+        rows: list[dict[str, Any]] = []
+        cvks: set[str] = set()
 
         for record in batch:
             book_num = int(record["book_number"])
@@ -202,19 +199,21 @@ class Neo4jClient:
             # Human-friendly reference like "Genesis 1:1a"
             reference = f'{record["book_name"]} {chapter_num}:{verse_num}{suffix}'
 
-            rows.append({
-                "translation": record["translation_code"],
-                "book_number": book_num,
-                "chapter_number": chapter_num,
-                "verse_number": verse_num,
-                "suffix": suffix,
-                "book_name": record["book_name"],
-                "testament": record["testament"],
-                "verse_id": record["verse_id"],
-                "text": record["text"],
-                "reference": reference,
-                "cvk": cvk,
-            })
+            rows.append(
+                {
+                    "translation": record["translation_code"],
+                    "book_number": book_num,
+                    "chapter_number": chapter_num,
+                    "verse_number": verse_num,
+                    "suffix": suffix,
+                    "book_name": record["book_name"],
+                    "testament": record["testament"],
+                    "verse_id": record["verse_id"],
+                    "text": record["text"],
+                    "reference": reference,
+                    "cvk": cvk,
+                }
+            )
 
         cypher = """
         UNWIND $rows AS r
@@ -303,8 +302,8 @@ class Neo4jClient:
         """
 
         # Split into chunks to avoid oversized UNWIND payloads
-        CHUNK_SIZE = 2000
+        chunk_size = 2000
         with self._session() as session:
-            for i in range(0, len(unique_keys), CHUNK_SIZE):
-                chunk = unique_keys[i : i + CHUNK_SIZE]
+            for i in range(0, len(unique_keys), chunk_size):
+                chunk = unique_keys[i : i + chunk_size]
                 session.run(cypher, kv=chunk)

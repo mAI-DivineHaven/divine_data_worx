@@ -22,19 +22,18 @@ Usage examples:
 """
 from __future__ import annotations
 
+import argparse
 import os
 import sys
-import json
-import argparse
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import Any, cast
 
-import requests
 import psycopg
+import requests
 from psycopg.rows import dict_row
 from tabulate import tabulate
 
 
-def get_conn(dsn: Optional[str]) -> psycopg.Connection:
+def get_conn(dsn: str | None) -> psycopg.Connection:
     dsn = dsn or os.getenv("DSN")
     if not dsn:
         print("ERROR: Provide a DSN via --dsn or DSN env var.", file=sys.stderr)
@@ -46,24 +45,22 @@ def get_conn(dsn: Optional[str]) -> psycopg.Connection:
 
 
 def fetchall(
-    conn: psycopg.Connection, sql: str, params: Optional[Tuple[Any, ...]] = None
-) -> List[Dict[str, Any]]:
+    conn: psycopg.Connection, sql: str, params: tuple[Any, ...] | None = None
+) -> list[dict[str, Any]]:
     with conn.cursor(row_factory=dict_row) as cur:
         cur.execute(cast(Any, sql), params or ())
         return list(cur.fetchall())
 
 
 def fetchone(
-    conn: psycopg.Connection, sql: str, params: Optional[Tuple[Any, ...]] = None
-) -> Optional[Dict[str, Any]]:
+    conn: psycopg.Connection, sql: str, params: tuple[Any, ...] | None = None
+) -> dict[str, Any] | None:
     with conn.cursor(row_factory=dict_row) as cur:
         cur.execute(cast(Any, sql), params or ())
         return cur.fetchone()
 
 
-def exec_sql(
-    conn: psycopg.Connection, sql: str, params: Optional[Tuple[Any, ...]] = None
-) -> None:
+def exec_sql(conn: psycopg.Connection, sql: str, params: tuple[Any, ...] | None = None) -> None:
     with conn.cursor() as cur:
         cur.execute(cast(Any, sql), params or ())
 
@@ -210,7 +207,7 @@ def cmd_integrity(conn: psycopg.Connection, args: argparse.Namespace) -> None:
 
 def cmd_analyze(conn: psycopg.Connection, args: argparse.Namespace) -> None:
     schema, table = split_table(args.table)
-    q = f'ANALYZE {"%s." % schema if schema else ""}{table};'
+    q = f'ANALYZE {f"{schema}." if schema else ""}{table};'
     exec_sql(conn, q)
     print(f"ANALYZE done for {args.table}")
 
@@ -218,7 +215,7 @@ def cmd_analyze(conn: psycopg.Connection, args: argparse.Namespace) -> None:
 # ---------- ANN / FTS / Hybrid ----------
 
 
-def call_ollama_embed(text: str, model: str, base_url: str) -> List[float]:
+def call_ollama_embed(text: str, model: str, base_url: str) -> list[float]:
     url = base_url.rstrip("/") + "/api/embed"
     payload = {"model": model, "input": [text]}
     try:
@@ -233,7 +230,7 @@ def call_ollama_embed(text: str, model: str, base_url: str) -> List[float]:
         raise RuntimeError(f"Ollama embed error: {e}") from e
 
 
-def to_pgvector_literal(vec: List[float]) -> str:
+def to_pgvector_literal(vec: list[float]) -> str:
     # pgvector text literal: '[v1, v2, ...]'
     return "[" + ",".join(f"{x:.8f}" for x in vec) + "]"
 
@@ -332,7 +329,7 @@ def cmd_hybrid(conn, args):
 # ---------- Utilities ----------
 
 
-def split_table(qualified: str) -> Tuple[Optional[str], str]:
+def split_table(qualified: str) -> tuple[str | None, str]:
     if "." in qualified:
         s, t = qualified.split(".", 1)
         return s, t
@@ -340,18 +337,14 @@ def split_table(qualified: str) -> Tuple[Optional[str], str]:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(
-        description="Post-embedding DB sanity checks (no psql needed)."
-    )
+    p = argparse.ArgumentParser(description="Post-embedding DB sanity checks (no psql needed).")
     p.add_argument("--dsn", help="Postgres DSN. If omitted, uses DSN env var.")
 
     sub = p.add_subparsers(dest="cmd", required=True)
 
     sub.add_parser("extensions", help="Check required extensions are present.")
 
-    ts = sub.add_parser(
-        "table-shape", help="Describe table shape, indexes, row estimate."
-    )
+    ts = sub.add_parser("table-shape", help="Describe table shape, indexes, row estimate.")
     ts.add_argument(
         "--table",
         default="verse_embedding",
@@ -364,9 +357,7 @@ def build_parser() -> argparse.ArgumentParser:
     ec.add_argument("--model", default="embeddinggemma")
     ec.add_argument("--dim", type=int, default=768)
 
-    integ = sub.add_parser(
-        "integrity", help="Null vectors, wrong dims, label distribution."
-    )
+    integ = sub.add_parser("integrity", help="Null vectors, wrong dims, label distribution.")
     integ.add_argument("--dim", type=int, default=768)
 
     an = sub.add_parser("analyze", help="Run ANALYZE after big upserts.")
@@ -379,9 +370,7 @@ def build_parser() -> argparse.ArgumentParser:
     ann.add_argument("--ollama", default="http://127.0.0.1:11434")
     ann.add_argument("--limit", type=int, default=10)
 
-    fts = sub.add_parser(
-        "fts-test", help="FTS (lexical) test using to_tsvector/simple."
-    )
+    fts = sub.add_parser("fts-test", help="FTS (lexical) test using to_tsvector/simple.")
     fts.add_argument(
         "--q",
         required=True,

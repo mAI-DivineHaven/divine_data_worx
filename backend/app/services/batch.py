@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Dict, List
-
 import asyncpg
 
 from ..models import (
@@ -47,7 +45,7 @@ class BatchService:
         )
         translation_order = list(dict.fromkeys(request.translations))
 
-        grouped: Dict[int, Dict[str, TranslationVerseEntry]] = {}
+        grouped: dict[int, dict[str, TranslationVerseEntry]] = {}
         for row in rows:
             idx = int(row["idx"])
             translation_code = row["translation_code"]
@@ -57,11 +55,11 @@ class BatchService:
                 text=row["text"],
             )
 
-        items: List[TranslationComparisonItem] = []
+        items: list[TranslationComparisonItem] = []
         for idx, reference in enumerate(request.references, start=1):
             translation_map = grouped.get(idx, {})
-            translations: List[TranslationVerseEntry] = []
-            missing_codes: List[str] = []
+            translations: list[TranslationVerseEntry] = []
+            missing_codes: list[str] = []
 
             for code in translation_order:
                 entry = translation_map.get(code)
@@ -82,9 +80,7 @@ class BatchService:
 
         return TranslationComparisonResponse(items=items)
 
-    async def lookup_embeddings(
-        self, request: EmbeddingLookupRequest
-    ) -> EmbeddingLookupResponse:
+    async def lookup_embeddings(self, request: EmbeddingLookupRequest) -> EmbeddingLookupResponse:
         """Return stored vector embeddings for a batch of verse identifiers."""
 
         rows = await self.repo.fetch_embeddings_by_ids(request.verse_ids, request.model)
@@ -103,4 +99,3 @@ class BatchService:
         missing = [vid for vid in unique_requested if vid not in found_ids]
 
         return EmbeddingLookupResponse(results=results, missing_ids=missing)
-

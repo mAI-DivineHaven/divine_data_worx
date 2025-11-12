@@ -7,7 +7,6 @@ Tests cover:
 - POST /v1/batch/embeddings - Batch embedding lookup
 """
 
-import pytest
 from fastapi.testclient import TestClient
 
 
@@ -17,10 +16,7 @@ class TestBatchVerses:
     def test_batch_verses_basic(self, client: TestClient):
         """Should retrieve multiple verses in a single request."""
         response = client.post(
-            "/v1/batch/verses",
-            json={
-                "verse_ids": ["NIV:1:1:1", "NIV:1:1:2", "ESV:1:1:1"]
-            }
+            "/v1/batch/verses", json={"verse_ids": ["NIV:1:1:1", "NIV:1:1:2", "ESV:1:1:1"]}
         )
 
         assert response.status_code == 200
@@ -33,10 +29,7 @@ class TestBatchVerses:
     def test_batch_verses_deduplication(self, client: TestClient):
         """Should deduplicate verse IDs."""
         response = client.post(
-            "/v1/batch/verses",
-            json={
-                "verse_ids": ["NIV:1:1:1", "NIV:1:1:1", "NIV:1:1:1"]
-            }
+            "/v1/batch/verses", json={"verse_ids": ["NIV:1:1:1", "NIV:1:1:1", "NIV:1:1:1"]}
         )
 
         assert response.status_code == 200
@@ -50,12 +43,7 @@ class TestBatchVerses:
         """Should track missing verse IDs."""
         response = client.post(
             "/v1/batch/verses",
-            json={
-                "verse_ids": [
-                    "NIV:1:1:1",  # Exists
-                    "INVALID:999:999:999"  # Does not exist
-                ]
-            }
+            json={"verse_ids": ["NIV:1:1:1", "INVALID:999:999:999"]},  # Exists  # Does not exist
         )
 
         assert response.status_code == 200
@@ -69,30 +57,19 @@ class TestBatchVerses:
         """Should enforce maximum of 500 verse IDs."""
         verse_ids = [f"NIV:1:1:{i}" for i in range(501)]
 
-        response = client.post(
-            "/v1/batch/verses",
-            json={"verse_ids": verse_ids}
-        )
+        response = client.post("/v1/batch/verses", json={"verse_ids": verse_ids})
 
         assert response.status_code == 422
 
     def test_batch_verses_empty_list(self, client: TestClient):
         """Should reject empty verse_ids list."""
-        response = client.post(
-            "/v1/batch/verses",
-            json={"verse_ids": []}
-        )
+        response = client.post("/v1/batch/verses", json={"verse_ids": []})
 
         assert response.status_code == 422
 
     def test_batch_verses_response_structure(self, client: TestClient):
         """Should return properly structured response."""
-        response = client.post(
-            "/v1/batch/verses",
-            json={
-                "verse_ids": ["NIV:1:1:1"]
-            }
-        )
+        response = client.post("/v1/batch/verses", json={"verse_ids": ["NIV:1:1:1"]})
 
         assert response.status_code == 200
         data = response.json()
@@ -117,15 +94,10 @@ class TestTranslationComparison:
             "/v1/batch/translations/compare",
             json={
                 "references": [
-                    {
-                        "book_number": 1,
-                        "chapter_number": 1,
-                        "verse_number": 1,
-                        "suffix": ""
-                    }
+                    {"book_number": 1, "chapter_number": 1, "verse_number": 1, "suffix": ""}
                 ],
-                "translations": ["NIV", "ESV", "KJV"]
-            }
+                "translations": ["NIV", "ESV", "KJV"],
+            },
         )
 
         assert response.status_code == 200
@@ -141,10 +113,10 @@ class TestTranslationComparison:
             json={
                 "references": [
                     {"book_number": 1, "chapter_number": 1, "verse_number": 1, "suffix": ""},
-                    {"book_number": 1, "chapter_number": 1, "verse_number": 2, "suffix": ""}
+                    {"book_number": 1, "chapter_number": 1, "verse_number": 2, "suffix": ""},
                 ],
-                "translations": ["NIV", "ESV"]
-            }
+                "translations": ["NIV", "ESV"],
+            },
         )
 
         assert response.status_code == 200
@@ -159,8 +131,8 @@ class TestTranslationComparison:
                 "references": [
                     {"book_number": 1, "chapter_number": 1, "verse_number": 1, "suffix": ""}
                 ],
-                "translations": ["NIV", "INVALID_TRANSLATION"]
-            }
+                "translations": ["NIV", "INVALID_TRANSLATION"],
+            },
         )
 
         assert response.status_code == 200
@@ -180,10 +152,7 @@ class TestTranslationComparison:
 
         response = client.post(
             "/v1/batch/translations/compare",
-            json={
-                "references": references,
-                "translations": ["NIV"]
-            }
+            json={"references": references, "translations": ["NIV"]},
         )
 
         assert response.status_code == 422
@@ -198,8 +167,8 @@ class TestTranslationComparison:
                 "references": [
                     {"book_number": 1, "chapter_number": 1, "verse_number": 1, "suffix": ""}
                 ],
-                "translations": translations
-            }
+                "translations": translations,
+            },
         )
 
         assert response.status_code == 422
@@ -212,8 +181,8 @@ class TestTranslationComparison:
                 "references": [
                     {"book_number": 43, "chapter_number": 3, "verse_number": 16, "suffix": ""}
                 ],
-                "translations": ["NIV", "ESV"]
-            }
+                "translations": ["NIV", "ESV"],
+            },
         )
 
         assert response.status_code == 200
@@ -235,10 +204,7 @@ class TestEmbeddingLookup:
         """Should retrieve embeddings for multiple verses."""
         response = client.post(
             "/v1/batch/embeddings",
-            json={
-                "verse_ids": ["NIV:1:1:1", "NIV:1:1:2"],
-                "model": "embeddinggemma"
-            }
+            json={"verse_ids": ["NIV:1:1:1", "NIV:1:1:2"], "model": "embeddinggemma"},
         )
 
         assert response.status_code == 200
@@ -251,10 +217,7 @@ class TestEmbeddingLookup:
         """Should track verses without embeddings."""
         response = client.post(
             "/v1/batch/embeddings",
-            json={
-                "verse_ids": ["INVALID:999:999:999"],
-                "model": "embeddinggemma"
-            }
+            json={"verse_ids": ["INVALID:999:999:999"], "model": "embeddinggemma"},
         )
 
         assert response.status_code == 200
@@ -266,11 +229,7 @@ class TestEmbeddingLookup:
         verse_ids = [f"NIV:1:1:{i}" for i in range(501)]
 
         response = client.post(
-            "/v1/batch/embeddings",
-            json={
-                "verse_ids": verse_ids,
-                "model": "embeddinggemma"
-            }
+            "/v1/batch/embeddings", json={"verse_ids": verse_ids, "model": "embeddinggemma"}
         )
 
         assert response.status_code == 422
@@ -278,11 +237,7 @@ class TestEmbeddingLookup:
     def test_embedding_lookup_response_structure(self, client: TestClient):
         """Should return properly structured embeddings."""
         response = client.post(
-            "/v1/batch/embeddings",
-            json={
-                "verse_ids": ["NIV:1:1:1"],
-                "model": "embeddinggemma"
-            }
+            "/v1/batch/embeddings", json={"verse_ids": ["NIV:1:1:1"], "model": "embeddinggemma"}
         )
 
         assert response.status_code == 200

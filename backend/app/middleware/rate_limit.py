@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import Iterable, Optional
+from collections.abc import Iterable
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -52,7 +52,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         redis_url: str,
         limit: int,
         window_seconds: int,
-        exempt_paths: Optional[Iterable[str]] = None,
+        exempt_paths: Iterable[str] | None = None,
         enabled: bool = True,
     ) -> None:
         super().__init__(app)
@@ -115,7 +115,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return True
         return request.url.path in self.exempt_paths
 
-    def _identifier_for(self, request: Request) -> Optional[tuple[str, str]]:
+    def _identifier_for(self, request: Request) -> tuple[str, str] | None:
         user = getattr(request.state, "user", None)
         if user and isinstance(user, dict):
             subject = user.get("sub") or user.get("id")
@@ -129,7 +129,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     async def _check(self, identifier: str) -> tuple[bool, int, int]:
         redis = await get_redis_client(self.redis_url)
         if redis is None:
-            count, remaining, reset = await self._local.increment(identifier, self.limit, self.window_seconds)
+            count, remaining, reset = await self._local.increment(
+                identifier, self.limit, self.window_seconds
+            )
             return count <= self.limit, remaining, reset
 
         key = f"ratelimit:{identifier}"
@@ -140,7 +142,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             ttl = await redis.ttl(key)
         except (RedisError, OSError) as exc:
             logger.warning("Redis rate limit failed, falling back", extra={"error": str(exc)})
-            count, remaining, reset = await self._local.increment(identifier, self.limit, self.window_seconds)
+            count, remaining, reset = await self._local.increment(
+                identifier, self.limit, self.window_seconds
+            )
             return count <= self.limit, remaining, reset
 
         remaining = max(self.limit - count, 0)

@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Dict, Iterable, List, Mapping, MutableMapping, Optional, Tuple
 
 from .models import ManifestMetadata, VerseMetrics
 
@@ -32,8 +31,8 @@ TRANSLATION_FILE_MAP: Mapping[str, str] = {
 def resolve_translation_file(
     translation: str,
     corpus_dir: Path,
-    overrides: Optional[Mapping[str, str]] = None,
-) -> Optional[Path]:
+    overrides: Mapping[str, str] | None = None,
+) -> Path | None:
     """Return the JSON file associated with a translation code if present."""
 
     mapping = dict(TRANSLATION_FILE_MAP)
@@ -49,7 +48,7 @@ def resolve_translation_file(
     return candidate
 
 
-def load_translation_file(path: Path | str) -> Dict[str, object]:
+def load_translation_file(path: Path | str) -> dict[str, object]:
     """Load a translation JSON payload."""
 
     file_path = Path(path)
@@ -57,7 +56,7 @@ def load_translation_file(path: Path | str) -> Dict[str, object]:
         return json.load(handle)
 
 
-def derive_metrics(translation: str, payload: Dict[str, object]) -> VerseMetrics:
+def derive_metrics(translation: str, payload: dict[str, object]) -> VerseMetrics:
     """Compute :class:`VerseMetrics` for a parsed translation payload."""
 
     books = payload.get("books", []) or []
@@ -98,12 +97,12 @@ def derive_metrics(translation: str, payload: Dict[str, object]) -> VerseMetrics
 def collect_verse_metrics(
     manifest: ManifestMetadata,
     corpus_dir: Path,
-    overrides: Optional[Mapping[str, str]] = None,
-) -> Tuple[Dict[str, VerseMetrics], List[str]]:
+    overrides: Mapping[str, str] | None = None,
+) -> tuple[dict[str, VerseMetrics], list[str]]:
     """Gather verse metrics for the translations enumerated in the manifest."""
 
-    metrics: Dict[str, VerseMetrics] = {}
-    warnings: List[str] = []
+    metrics: dict[str, VerseMetrics] = {}
+    warnings: list[str] = []
 
     for translation in manifest.translation_set:
         file_path = resolve_translation_file(translation, corpus_dir, overrides=overrides)
@@ -115,9 +114,7 @@ def collect_verse_metrics(
         try:
             payload = load_translation_file(file_path)
         except json.JSONDecodeError as exc:  # pragma: no cover - defensive
-            warnings.append(
-                f"Failed to parse JSON for translation '{translation}': {exc}"
-            )
+            warnings.append(f"Failed to parse JSON for translation '{translation}': {exc}")
             continue
         metrics[translation] = derive_metrics(translation, payload)
 

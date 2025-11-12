@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import json
 import os
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Mapping, Optional
 
 from dagster import ConfigurableResource, InitResourceContext
 
@@ -26,8 +26,8 @@ class ManifestValidationReport:
     """Container returned by :class:`ManifestServiceResource.validate_manifest`."""
 
     manifest: Manifest
-    results: Dict[str, ValidationResult]
-    warnings: List[str]
+    results: dict[str, ValidationResult]
+    warnings: list[str]
 
     def as_json(self) -> str:
         """Serialize the validation report for logging or dashboards."""
@@ -69,11 +69,9 @@ class ManifestServiceResource(ConfigurableResource):
         corpus_path = Path(self.corpus_dir)
         metrics, warnings = collect_verse_metrics(metadata, corpus_path)
 
-        validations: Dict[str, ValidationResult] = {}
+        validations: dict[str, ValidationResult] = {}
         validations["verse_coverage"] = validate_verse_coverage(metadata, metrics)
-        validations["embedding_completeness"] = validate_embedding_completeness(
-            metadata, metrics
-        )
+        validations["embedding_completeness"] = validate_embedding_completeness(metadata, metrics)
         validations["graph_edge_integrity"] = validate_graph_edge_integrity(metadata, metrics)
 
         return ManifestValidationReport(manifest=manifest, results=validations, warnings=warnings)
@@ -85,7 +83,7 @@ class EmbeddingServiceResource(ConfigurableResource):
     endpoint_url: str = os.getenv("EMBEDDING_ENDPOINT", "http://backend:8000/api/embed/run")
     timeout: float = float(os.getenv("EMBEDDING_TIMEOUT", "30"))
 
-    def generate_embeddings(self, manifest_payload: Mapping[str, object]) -> Dict[str, object]:
+    def generate_embeddings(self, manifest_payload: Mapping[str, object]) -> dict[str, object]:
         """Trigger embedding generation via HTTP.
 
         The actual embedding API may not exist in all environments. The resource
@@ -130,8 +128,8 @@ class PostgresResource(ConfigurableResource):
     def build_vector_indexes(
         self,
         manifest_payload: Mapping[str, object],
-        statements: Optional[Iterable[str]] = None,
-    ) -> List[str]:
+        statements: Iterable[str] | None = None,
+    ) -> list[str]:
         """Create pgvector indexes guided by the manifest."""
 
         plan = list(statements or [])
@@ -139,8 +137,7 @@ class PostgresResource(ConfigurableResource):
             embedding = manifest_payload.get("embedding_recipe", {}) or {}
             dim = int(embedding.get("embedding_dim", 768))
             plan.append(
-                f"ALTER TABLE {self.schema}.embeddings "
-                f"ALTER COLUMN vector TYPE vector({dim});"
+                f"ALTER TABLE {self.schema}.embeddings " f"ALTER COLUMN vector TYPE vector({dim});"
             )
             plan.append(
                 f"CREATE INDEX IF NOT EXISTS embeddings_vector_idx "
@@ -152,7 +149,7 @@ class PostgresResource(ConfigurableResource):
         import psycopg
 
         normalized = self._normalized_dsn()
-        executed: List[str] = []
+        executed: list[str] = []
         with psycopg.connect(normalized) as conn:
             conn.autocommit = True
             with conn.cursor() as cursor:
@@ -189,7 +186,7 @@ class Neo4jResource(ConfigurableResource):
         return created_count
 
 
-def build_resource_instances(context: Optional[InitResourceContext] = None) -> Dict[str, object]:
+def build_resource_instances(context: InitResourceContext | None = None) -> dict[str, object]:
     """Return instantiated resources for Dagster Definitions."""
 
     return {

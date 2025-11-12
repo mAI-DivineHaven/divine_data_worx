@@ -12,7 +12,6 @@ from .jobs import (
     pgvector_index_job,
 )
 
-
 manifest_validation_schedule = ScheduleDefinition(
     name="manifest_validation_hourly",
     cron_schedule="0 * * * *",

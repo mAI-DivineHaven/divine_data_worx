@@ -8,7 +8,6 @@ from dataclasses import dataclass
 from hashlib import pbkdf2_hmac
 from typing import Final
 
-
 DEFAULT_ITERATIONS: Final[int] = 150_000
 ALGORITHM: Final[str] = "sha256"
 

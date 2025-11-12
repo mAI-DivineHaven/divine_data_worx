@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Any, Dict, List
+from datetime import UTC, datetime
+from typing import Any
 
 import pytest
 
@@ -15,13 +15,13 @@ async def test_session_memory_crud(async_client, mock_pg_conn):
     """Exercise session memory CRUD endpoints with mocked persistence."""
 
     session_id = "session-unit"
-    messages: List[Dict[str, Any]] = []
-    citations: List[Dict[str, Any]] = []
+    messages: list[dict[str, Any]] = []
+    citations: list[dict[str, Any]] = []
     next_message_id = 1
     next_citation_id = 1
 
     def now() -> datetime:
-        return datetime.now(timezone.utc)
+        return datetime.now(UTC)
 
     async def fetchrow_side_effect(query, *args, **kwargs):
         nonlocal next_message_id, next_citation_id
@@ -79,7 +79,7 @@ async def test_session_memory_crud(async_client, mock_pg_conn):
             limit = args[1]
             offset = args[2]
             rows = [m for m in messages if m["session_id"] == args[0]]
-            slice_rows = rows[offset: offset + limit]
+            slice_rows = rows[offset : offset + limit]
             return [create_mock_record(row) for row in slice_rows]
         if "FROM SESSION_CITATION" in sql:
             if "ANY($1::BIGINT[])" in sql:
@@ -156,15 +156,11 @@ async def test_session_memory_crud(async_client, mock_pg_conn):
     assert updated["content"] == "Updated response"
     assert updated["citations"] == []
 
-    get_response = await async_client.get(
-        f"/v1/sessions/{session_id}/messages/{message_id}"
-    )
+    get_response = await async_client.get(f"/v1/sessions/{session_id}/messages/{message_id}")
     assert get_response.status_code == 200
     assert get_response.json()["content"] == "Updated response"
 
-    delete_response = await async_client.delete(
-        f"/v1/sessions/{session_id}/messages/{message_id}"
-    )
+    delete_response = await async_client.delete(f"/v1/sessions/{session_id}/messages/{message_id}")
     assert delete_response.status_code == 204
 
     empty_response = await async_client.get(f"/v1/sessions/{session_id}/messages")

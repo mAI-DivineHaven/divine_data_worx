@@ -1,10 +1,10 @@
 """Data access repositories for DivineHaven domain entities."""
 
-from .verses import VerseRepository
-from .stats import StatsRepository
-from .search import SearchRepository
-from .chunks import ChunkRepository
 from . import assets
+from .chunks import ChunkRepository
+from .search import SearchRepository
+from .stats import StatsRepository
+from .verses import VerseRepository
 
 __all__ = [
     "VerseRepository",

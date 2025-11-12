@@ -3,24 +3,24 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Set
 
 
 @dataclass(frozen=True)
 class ManifestMetadata:
     """Subset of manifest.json fields required for validation routines."""
 
-    translation_set: List[str]
-    languages: List[str]
+    translation_set: list[str]
+    languages: list[str]
     embedding_model: str
     embedding_dim: int
     chunking_granularity: str
     graph_expansion_enabled: bool
 
     @classmethod
-    def from_dict(cls, payload: Dict[str, object]) -> "ManifestMetadata":
+    def from_dict(cls, payload: dict[str, object]) -> ManifestMetadata:
         """Build a :class:`ManifestMetadata` instance from a manifest dictionary."""
 
         embedding = payload.get("embedding_recipe", {}) or {}
@@ -53,7 +53,7 @@ class ManifestMetadata:
         )
 
     @classmethod
-    def from_path(cls, path: Path | str) -> "ManifestMetadata":
+    def from_path(cls, path: Path | str) -> ManifestMetadata:
         """Load a manifest JSON file from disk."""
 
         manifest_path = Path(path)
@@ -69,7 +69,7 @@ class VerseMetrics:
     translation: str
     verse_count: int
     non_empty_text_count: int
-    canonical_keys: Set[str] = field(default_factory=set)
+    canonical_keys: set[str] = field(default_factory=set)
 
     def missing_text_count(self) -> int:
         """Return the number of verses with empty or whitespace-only payloads."""
@@ -83,10 +83,10 @@ class ValidationResult:
 
     name: str
     passed: bool
-    errors: List[str] = field(default_factory=list)
-    warnings: List[str] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
 
-    def extend_errors(self, messages: Iterable[str]) -> "ValidationResult":
+    def extend_errors(self, messages: Iterable[str]) -> ValidationResult:
         """Return a new :class:`ValidationResult` with additional error messages."""
 
         return ValidationResult(
@@ -96,7 +96,7 @@ class ValidationResult:
             warnings=list(self.warnings),
         )
 
-    def add_warning(self, message: str) -> "ValidationResult":
+    def add_warning(self, message: str) -> ValidationResult:
         """Return a copy with an appended warning message."""
 
         return ValidationResult(

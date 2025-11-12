@@ -6,10 +6,10 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from statistics import mean
-from typing import Iterable, List, Sequence
 
 DEFAULT_DATASET = Path("Analysis/golden/hybrid_graph_queries.json")
 
@@ -23,7 +23,7 @@ class GoldenCase:
     expected_ids: Sequence[str]
 
     @classmethod
-    def from_payload(cls, payload: dict) -> "GoldenCase":
+    def from_payload(cls, payload: dict) -> GoldenCase:
         return cls(
             name=payload["name"],
             relevant=tuple(payload.get("relevant", [])),
@@ -31,7 +31,7 @@ class GoldenCase:
         )
 
 
-def load_golden_cases(dataset_path: Path) -> List[GoldenCase]:
+def load_golden_cases(dataset_path: Path) -> list[GoldenCase]:
     """Load and normalise the curated golden dataset."""
 
     if not dataset_path.exists():
@@ -41,7 +41,9 @@ def load_golden_cases(dataset_path: Path) -> List[GoldenCase]:
     return [GoldenCase.from_payload(item) for item in payload]
 
 
-def load_predictions(predictions_path: Path | None, cases: Sequence[GoldenCase]) -> dict[str, Sequence[str]]:
+def load_predictions(
+    predictions_path: Path | None, cases: Sequence[GoldenCase]
+) -> dict[str, Sequence[str]]:
     """Resolve retrieval predictions either from file or default expected hits."""
 
     if predictions_path is None:
@@ -88,8 +90,8 @@ def evaluate(
 ) -> tuple[float, float]:
     """Return (hit_rate@k, mean_reciprocal_rank)."""
 
-    recalls: List[float] = []
-    reciprocal_ranks: List[float] = []
+    recalls: list[float] = []
+    reciprocal_ranks: list[float] = []
 
     for case in cases:
         retrieved = predictions.get(case.name, ())

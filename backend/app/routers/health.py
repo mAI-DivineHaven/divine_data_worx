@@ -25,14 +25,13 @@ Integration with monitoring:
     ```
 """
 
-from typing import Dict
 from fastapi import APIRouter
 
 router = APIRouter()
 
 
-@router.get("/healthz", response_model=Dict[str, bool])
-def healthz() -> Dict[str, bool]:
+@router.get("/healthz", response_model=dict[str, bool])
+def healthz() -> dict[str, bool]:
     """
     Health check endpoint for API uptime monitoring.
 

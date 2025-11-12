@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 import uuid
-from typing import Iterable, Optional
+from collections.abc import Iterable
 
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -21,7 +21,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     def __init__(
         self,
         app,
-        exempt_paths: Optional[Iterable[str]] = None,
+        exempt_paths: Iterable[str] | None = None,
         metrics_enabled: bool = True,
     ) -> None:
         super().__init__(app)
@@ -39,7 +39,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
         try:
             response = await call_next(request)
-        except Exception as exc:  # noqa: BLE001
+        except Exception:  # noqa: BLE001
             duration = time.perf_counter() - start
             logger.exception(
                 "request_error",
