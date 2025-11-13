@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-from typing import List
-
 import asyncpg
 
-from ..models import Verse, VerseLite, Book, Chapter, Translation
+from ..models import Book, Chapter, Translation, Verse, VerseLite
 from ..repositories.verses import VerseRepository
 
 
@@ -41,7 +39,7 @@ class VerseService:
         chapter_number: int,
         limit: int,
         offset: int,
-    ) -> List[VerseLite]:
+    ) -> list[VerseLite]:
         """Return verses for a chapter with bounds checking."""
         if limit <= 0:
             raise ValueError("limit must be positive")
@@ -55,17 +53,17 @@ class VerseService:
             offset=offset,
         )
 
-    async def list_translations(self) -> List[Translation]:
+    async def list_translations(self) -> list[Translation]:
         """Return translation metadata."""
         return await self._repo.list_translations()
 
-    async def list_books(self, translation: str) -> List[Book]:
+    async def list_books(self, translation: str) -> list[Book]:
         """Return books for translation with validation."""
         if not translation:
             raise ValueError("translation is required")
         return await self._repo.list_books(translation=translation)
 
-    async def list_chapters(self, translation: str, book_number: int) -> List[Chapter]:
+    async def list_chapters(self, translation: str, book_number: int) -> list[Chapter]:
         """Return chapters for book with validation."""
         if not translation:
             raise ValueError("translation is required")

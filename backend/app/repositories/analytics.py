@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 from datetime import datetime
 
 import asyncpg
@@ -35,7 +35,9 @@ class AnalyticsRepository:
         """
         return await self.conn.fetchrow(sql, start, end)
 
-    async def fetch_mode_breakdown(self, start: datetime, end: datetime) -> Sequence[asyncpg.Record]:
+    async def fetch_mode_breakdown(
+        self, start: datetime, end: datetime
+    ) -> Sequence[asyncpg.Record]:
         """Return query counts grouped by search mode."""
 
         sql = """

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID
 
 import asyncpg
@@ -21,9 +21,7 @@ class UserRepository:
     """CRUD helpers for app_user and user_profile tables."""
 
     @staticmethod
-    async def create_user(
-        conn: asyncpg.Connection, payload: RegistrationRequest
-    ) -> asyncpg.Record:
+    async def create_user(conn: asyncpg.Connection, payload: RegistrationRequest) -> asyncpg.Record:
         password_hash = hash_password(payload.password)
         row = await conn.fetchrow(
             """
@@ -107,7 +105,7 @@ class UserRepository:
             user_id,
         )
 
-        merged: Dict[str, Any] = existing or {}
+        merged: dict[str, Any] = existing or {}
         for key, value in update.preferences.items():
             merged[key] = value.model_dump()
 
@@ -125,9 +123,7 @@ class UserRepository:
         return row
 
     @staticmethod
-    async def fetch_profile(
-        conn: asyncpg.Connection, user_id: UUID
-    ) -> Optional[asyncpg.Record]:
+    async def fetch_profile(conn: asyncpg.Connection, user_id: UUID) -> asyncpg.Record | None:
         row = await conn.fetchrow(
             """
             SELECT
@@ -178,9 +174,7 @@ class ConversationRepository:
         return row
 
     @staticmethod
-    async def list_conversations(
-        conn: asyncpg.Connection, user_id: UUID
-    ) -> List[asyncpg.Record]:
+    async def list_conversations(conn: asyncpg.Connection, user_id: UUID) -> list[asyncpg.Record]:
         rows = await conn.fetch(
             """
             SELECT conversation_id, user_id, title, metadata, created_at, updated_at
@@ -195,7 +189,7 @@ class ConversationRepository:
     @staticmethod
     async def fetch_conversation(
         conn: asyncpg.Connection, conversation_id: UUID
-    ) -> Optional[asyncpg.Record]:
+    ) -> asyncpg.Record | None:
         row = await conn.fetchrow(
             """
             SELECT conversation_id, user_id, title, metadata, created_at, updated_at
@@ -237,7 +231,7 @@ class ConversationRepository:
     @staticmethod
     async def list_messages(
         conn: asyncpg.Connection, conversation_id: UUID
-    ) -> List[asyncpg.Record]:
+    ) -> list[asyncpg.Record]:
         rows = await conn.fetch(
             """
             SELECT message_id, conversation_id, sender_role, content, metadata, created_at, sequence

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from collections.abc import Sequence
+from typing import Any
 
 import asyncpg
 
@@ -24,11 +25,11 @@ class AssetRepository:
         asset_id: str,
         media_type: str,
         title: str,
-        description: Optional[str] = None,
-        text_payload: Optional[str] = None,
-        payload_json: Optional[Dict[str, Any]] = None,
-        license: Optional[str] = None,
-        origin_url: Optional[str] = None,
+        description: str | None = None,
+        text_payload: str | None = None,
+        payload_json: dict[str, Any] | None = None,
+        license: str | None = None,
+        origin_url: str | None = None,
     ) -> Asset:
         row = await self.conn.fetchrow(
             """
@@ -50,7 +51,7 @@ class AssetRepository:
         )
         return self._row_to_asset(row)
 
-    async def get_by_id(self, asset_id: str) -> Optional[Asset]:
+    async def get_by_id(self, asset_id: str) -> Asset | None:
         row = await self.conn.fetchrow(
             "SELECT * FROM asset WHERE asset_id = $1",
             asset_id,
@@ -62,11 +63,11 @@ class AssetRepository:
         *,
         limit: int,
         offset: int,
-        media_type: Optional[str] = None,
-        search: Optional[str] = None,
-    ) -> Tuple[int, List[Asset]]:
-        filters: List[str] = []
-        params: List[Any] = []
+        media_type: str | None = None,
+        search: str | None = None,
+    ) -> tuple[int, list[Asset]]:
+        filters: list[str] = []
+        params: list[Any] = []
 
         if media_type:
             filters.append(f"media_type = ${len(params) + 1}")
@@ -97,22 +98,18 @@ class AssetRepository:
         self,
         asset_id: str,
         *,
-        fields: Dict[str, Any],
-    ) -> Optional[Asset]:
+        fields: dict[str, Any],
+    ) -> Asset | None:
         if not fields:
             return await self.get_by_id(asset_id)
 
-        assignments: List[str] = []
-        values: List[Any] = [asset_id]
+        assignments: list[str] = []
+        values: list[Any] = [asset_id]
         for idx, (column, value) in enumerate(fields.items(), start=1):
             assignments.append(f"{column} = ${idx + 1}")
             values.append(value)
 
-        sql = (
-            "UPDATE asset SET "
-            + ", ".join(assignments)
-            + " WHERE asset_id = $1 RETURNING *"
-        )
+        sql = "UPDATE asset SET " + ", ".join(assignments) + " WHERE asset_id = $1 RETURNING *"
         row = await self.conn.fetchrow(sql, *values)
         return self._row_to_asset(row) if row else None
 
@@ -133,7 +130,7 @@ class AssetRepository:
         embedding: Sequence[float],
         model: str,
         dim: int,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         await self.conn.execute(
             """
@@ -155,9 +152,7 @@ class AssetRepository:
             metadata,
         )
 
-    async def get_embedding_info(
-        self, asset_id: str
-    ) -> Optional[Dict[str, Any]]:
+    async def get_embedding_info(self, asset_id: str) -> dict[str, Any] | None:
         row = await self.conn.fetchrow(
             """
             SELECT asset_id, embedding_model, embedding_dim, embedding_ts, metadata
@@ -182,7 +177,7 @@ class AssetRepository:
         model: str,
         dim: int,
         limit: int,
-    ) -> List[Tuple[Asset, float]]:
+    ) -> list[tuple[Asset, float]]:
         rows = await self.conn.fetch(
             """
             SELECT a.*, (1.0 - (ae.embedding <=> $1::vector))::float AS score
@@ -197,7 +192,7 @@ class AssetRepository:
             dim,
             limit,
         )
-        results: List[Tuple[Asset, float]] = []
+        results: list[tuple[Asset, float]] = []
         for row in rows:
             record = dict(row)
             score = float(record.pop("score"))
@@ -213,7 +208,7 @@ class AssetRepository:
         asset_id: str,
         verse_ids: Sequence[str],
         relation: str,
-        chunk_id: Optional[str] = None,
+        chunk_id: str | None = None,
     ) -> int:
         rows = await self.conn.fetch(
             """
@@ -234,7 +229,7 @@ class AssetRepository:
         self,
         *,
         asset_id: str,
-        verse_ids: Optional[Sequence[str]] = None,
+        verse_ids: Sequence[str] | None = None,
     ) -> int:
         if verse_ids:
             result = await self.conn.execute(
@@ -249,7 +244,7 @@ class AssetRepository:
             )
         return self._parse_rowcount(result)
 
-    async def fetch_links(self, asset_id: str) -> List[AssetVerseLink]:
+    async def fetch_links(self, asset_id: str) -> list[AssetVerseLink]:
         rows = await self.conn.fetch(
             """
             SELECT
@@ -269,7 +264,7 @@ class AssetRepository:
             """,
             asset_id,
         )
-        links: List[AssetVerseLink] = []
+        links: list[AssetVerseLink] = []
         for row in rows:
             record = dict(row)
             reference = (

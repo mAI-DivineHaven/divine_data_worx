@@ -8,8 +8,6 @@ behaviour programmatically.
 
 from __future__ import annotations
 
-from typing import List, Optional
-
 import asyncpg
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
@@ -48,8 +46,8 @@ def get_asset_service(conn: asyncpg.Connection = Depends(get_pg)) -> AssetServic
 async def list_assets(
     limit: int = Query(20, ge=1),
     offset: int = Query(0, ge=0),
-    media_type: Optional[str] = Query(None, description="Filter by media type"),
-    search: Optional[str] = Query(None, description="Full-text search on title/description"),
+    media_type: str | None = Query(None, description="Filter by media type"),
+    search: str | None = Query(None, description="Full-text search on title/description"),
     service: AssetService = Depends(get_asset_service),
 ) -> AssetListResponse:
     """Retrieve a paginated list of assets.
@@ -315,7 +313,7 @@ async def list_asset_links(
 @router.delete("/{asset_id}/links", response_model=AssetUnlinkResponse)
 async def unlink_asset_from_verses(
     asset_id: str,
-    verse_id: Optional[List[str]] = Query(None, description="Specific verse IDs to unlink"),
+    verse_id: list[str] | None = Query(None, description="Specific verse IDs to unlink"),
     service: AssetService = Depends(get_asset_service),
 ) -> AssetUnlinkResponse:
     """Remove verse links from an asset.

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
-from typing import Optional, Sequence
 import asyncio
+from collections.abc import Sequence
+from datetime import UTC, datetime, timedelta
 
 import asyncpg
 
@@ -15,8 +15,8 @@ from ..models import (
     QueryCounts,
     QueryTrends,
     TopQuery,
-    TrendPoint,
     TranslationUsage,
+    TrendPoint,
     UsageStats,
 )
 from ..repositories.analytics import AnalyticsRepository
@@ -41,9 +41,9 @@ class AnalyticsService:
     async def overview(
         self,
         *,
-        start: Optional[datetime] = None,
-        end: Optional[datetime] = None,
-        interval: Optional[str] = None,
+        start: datetime | None = None,
+        end: datetime | None = None,
+        interval: str | None = None,
     ) -> AnalyticsOverview:
         """Return comprehensive analytics for the requested window."""
 
@@ -81,9 +81,9 @@ class AnalyticsService:
     async def trends(
         self,
         *,
-        start: Optional[datetime] = None,
-        end: Optional[datetime] = None,
-        interval: Optional[str] = None,
+        start: datetime | None = None,
+        end: datetime | None = None,
+        interval: str | None = None,
     ) -> QueryTrends:
         """Return trend data only."""
 
@@ -95,8 +95,8 @@ class AnalyticsService:
     async def usage(
         self,
         *,
-        start: Optional[datetime] = None,
-        end: Optional[datetime] = None,
+        start: datetime | None = None,
+        end: datetime | None = None,
     ) -> UsageStats:
         """Return usage metrics only."""
 
@@ -111,8 +111,8 @@ class AnalyticsService:
     async def counts(
         self,
         *,
-        start: Optional[datetime] = None,
-        end: Optional[datetime] = None,
+        start: datetime | None = None,
+        end: datetime | None = None,
     ) -> QueryCounts:
         """Return query count summary only."""
 
@@ -125,18 +125,16 @@ class AnalyticsService:
         return self._build_query_counts(summary_row, mode_rows, top_rows)
 
     def _resolve_window(
-        self, start: Optional[datetime], end: Optional[datetime]
+        self, start: datetime | None, end: datetime | None
     ) -> tuple[datetime, datetime]:
-        now = datetime.now(timezone.utc)
-        window_end = end.astimezone(timezone.utc) if end else now
-        window_start = start.astimezone(timezone.utc) if start else window_end - timedelta(days=7)
+        now = datetime.now(UTC)
+        window_end = end.astimezone(UTC) if end else now
+        window_start = start.astimezone(UTC) if start else window_end - timedelta(days=7)
         if window_start >= window_end:
             raise ValueError("start must be earlier than end")
         return window_start, window_end
 
-    def _resolve_interval(
-        self, interval: Optional[str], start: datetime, end: datetime
-    ) -> str:
+    def _resolve_interval(self, interval: str | None, start: datetime, end: datetime) -> str:
         if interval:
             interval = interval.lower()
             if interval not in {"hour", "day"}:
@@ -149,13 +147,21 @@ class AnalyticsService:
 
     def _build_query_counts(
         self,
-        summary_row: Optional[asyncpg.Record],
+        summary_row: asyncpg.Record | None,
         mode_rows: Sequence[asyncpg.Record],
         top_rows: Sequence[asyncpg.Record],
     ) -> QueryCounts:
-        total_queries = int(summary_row["total_queries"]) if summary_row and summary_row["total_queries"] else 0
-        unique_users = int(summary_row["unique_users"]) if summary_row and summary_row["unique_users"] else 0
-        avg_latency = float(summary_row["avg_latency_ms"]) if summary_row and summary_row["avg_latency_ms"] is not None else None
+        total_queries = (
+            int(summary_row["total_queries"]) if summary_row and summary_row["total_queries"] else 0
+        )
+        unique_users = (
+            int(summary_row["unique_users"]) if summary_row and summary_row["unique_users"] else 0
+        )
+        avg_latency = (
+            float(summary_row["avg_latency_ms"])
+            if summary_row and summary_row["avg_latency_ms"] is not None
+            else None
+        )
 
         mode_breakdown: list[ModeCount] = []
         for row in mode_rows:
@@ -189,9 +195,7 @@ class AnalyticsService:
             top_queries=top_queries,
         )
 
-    def _build_trends(
-        self, interval: str, rows: Sequence[asyncpg.Record]
-    ) -> QueryTrends:
+    def _build_trends(self, interval: str, rows: Sequence[asyncpg.Record]) -> QueryTrends:
         points: list[TrendPoint] = []
         for row in rows:
             bucket_start = row["bucket_start"]
@@ -208,11 +212,13 @@ class AnalyticsService:
 
     def _build_usage(
         self,
-        summary_row: Optional[asyncpg.Record],
+        summary_row: asyncpg.Record | None,
         translation_rows: Sequence[asyncpg.Record],
         book_rows: Sequence[asyncpg.Record],
     ) -> UsageStats:
-        total_queries = int(summary_row["total_queries"]) if summary_row and summary_row["total_queries"] else 0
+        total_queries = (
+            int(summary_row["total_queries"]) if summary_row and summary_row["total_queries"] else 0
+        )
 
         translation_stats: list[TranslationUsage] = []
         for row in translation_rows:
@@ -226,7 +232,9 @@ class AnalyticsService:
                 )
             )
 
-        total_book_occurrences = sum(int(row["count"]) for row in book_rows if row["count"] is not None)
+        total_book_occurrences = sum(
+            int(row["count"]) for row in book_rows if row["count"] is not None
+        )
         book_stats: list[BookUsage] = []
         for row in book_rows:
             count = int(row["count"]) if row["count"] is not None else 0

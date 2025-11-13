@@ -9,7 +9,6 @@ Tests cover:
 - GET /v1/verses/chapters - List chapters in book
 """
 
-import pytest
 from fastapi.testclient import TestClient
 
 
@@ -64,12 +63,7 @@ class TestListVerses:
         """Should return verses from Genesis 1."""
         response = client.get(
             "/v1/verses",
-            params={
-                "translation": "NIV",
-                "book_number": 1,
-                "chapter_number": 1,
-                "limit": 10
-            }
+            params={"translation": "NIV", "book_number": 1, "chapter_number": 1, "limit": 10},
         )
 
         assert response.status_code == 200
@@ -94,8 +88,8 @@ class TestListVerses:
                 "book_number": 1,
                 "chapter_number": 1,
                 "limit": 5,
-                "offset": 0
-            }
+                "offset": 0,
+            },
         )
 
         # Get next 5 verses
@@ -106,8 +100,8 @@ class TestListVerses:
                 "book_number": 1,
                 "chapter_number": 1,
                 "limit": 5,
-                "offset": 5
-            }
+                "offset": 5,
+            },
         )
 
         assert response1.status_code == 200
@@ -132,11 +126,7 @@ class TestListVerses:
         """Should return 422 when book_number is out of range."""
         response = client.get(
             "/v1/verses",
-            params={
-                "translation": "NIV",
-                "book_number": 999,  # Invalid
-                "chapter_number": 1
-            }
+            params={"translation": "NIV", "book_number": 999, "chapter_number": 1},  # Invalid
         )
 
         assert response.status_code == 422
@@ -148,8 +138,8 @@ class TestListVerses:
             params={
                 "translation": "NIV",
                 "book_number": 1,
-                "chapter_number": 999  # Unlikely to exist
-            }
+                "chapter_number": 999,  # Unlikely to exist
+            },
         )
 
         # Should still return 200 with empty list, not 404
@@ -162,10 +152,13 @@ class TestListVerses:
 class TestListTranslations:
     """Tests for GET /v1/verses/translations endpoint."""
 
-    def test_list_translations_success(self, client: TestClient, mock_pg_conn, sample_translations_list):
+    def test_list_translations_success(
+        self, client: TestClient, mock_pg_conn, sample_translations_list
+    ):
         """Should return list of all available translations."""
         # Configure mock to return sample translations
         from tests.conftest import configure_mock_fetch
+
         configure_mock_fetch(mock_pg_conn, sample_translations_list)
 
         response = client.get("/v1/verses/translations")
@@ -181,10 +174,13 @@ class TestListTranslations:
         assert "language" in first_translation
         assert "format" in first_translation
 
-    def test_list_translations_contains_common_translations(self, client: TestClient, mock_pg_conn, sample_translations_list):
+    def test_list_translations_contains_common_translations(
+        self, client: TestClient, mock_pg_conn, sample_translations_list
+    ):
         """Should include common translations like NIV, ESV, KJV."""
         # Configure mock to return sample translations
         from tests.conftest import configure_mock_fetch
+
         configure_mock_fetch(mock_pg_conn, sample_translations_list)
 
         response = client.get("/v1/verses/translations")
@@ -206,6 +202,7 @@ class TestListTranslations:
         """
         # Configure mock to return empty list
         from tests.conftest import configure_mock_fetch
+
         configure_mock_fetch(mock_pg_conn, [])
 
         response = client.get("/v1/verses/translations")
@@ -220,10 +217,7 @@ class TestListBooks:
 
     def test_list_books_success(self, client: TestClient):
         """Should return list of books for a translation."""
-        response = client.get(
-            "/v1/verses/books",
-            params={"translation": "NIV"}
-        )
+        response = client.get("/v1/verses/books", params={"translation": "NIV"})
 
         assert response.status_code == 200
         data = response.json()
@@ -240,10 +234,7 @@ class TestListBooks:
 
     def test_list_books_genesis_first(self, client: TestClient):
         """Should return Genesis as first book (book_number=1)."""
-        response = client.get(
-            "/v1/verses/books",
-            params={"translation": "NIV"}
-        )
+        response = client.get("/v1/verses/books", params={"translation": "NIV"})
 
         assert response.status_code == 200
         data = response.json()
@@ -262,10 +253,7 @@ class TestListBooks:
 
     def test_list_books_invalid_translation(self, client: TestClient):
         """Should return empty list or 400 for invalid translation."""
-        response = client.get(
-            "/v1/verses/books",
-            params={"translation": "INVALID_TRANSLATION"}
-        )
+        response = client.get("/v1/verses/books", params={"translation": "INVALID_TRANSLATION"})
 
         # Should return 200 with empty list OR 400, but never 404
         assert response.status_code in [200, 400]
@@ -278,10 +266,7 @@ class TestListBooks:
         Critical: List endpoint should NEVER return 404.
         Should return empty array if no books exist.
         """
-        response = client.get(
-            "/v1/verses/books",
-            params={"translation": "NIV"}
-        )
+        response = client.get("/v1/verses/books", params={"translation": "NIV"})
 
         assert response.status_code == 200, "List endpoint must return 200, not 404"
         data = response.json()
@@ -294,11 +279,7 @@ class TestListChapters:
     def test_list_chapters_genesis(self, client: TestClient):
         """Should return list of chapters for Genesis."""
         response = client.get(
-            "/v1/verses/chapters",
-            params={
-                "translation": "NIV",
-                "book_number": 1
-            }
+            "/v1/verses/chapters", params={"translation": "NIV", "book_number": 1}
         )
 
         assert response.status_code == 200
@@ -322,11 +303,7 @@ class TestListChapters:
     def test_list_chapters_invalid_book(self, client: TestClient):
         """Should handle invalid book number gracefully."""
         response = client.get(
-            "/v1/verses/chapters",
-            params={
-                "translation": "NIV",
-                "book_number": 999
-            }
+            "/v1/verses/chapters", params={"translation": "NIV", "book_number": 999}
         )
 
         # Should return 200 with empty list OR 400, but never 404

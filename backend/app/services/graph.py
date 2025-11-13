@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable, List, Tuple
+from collections.abc import Iterable
+from typing import Any
 
 from neo4j import AsyncSession
 
@@ -15,11 +16,11 @@ class GraphServiceError(Exception):
     """Base error for graph service operations."""
 
 
-class InvalidVerseIdentifier(GraphServiceError):
+class InvalidVerseIdentifierError(GraphServiceError):
     """Raised when a verse identifier cannot be parsed."""
 
 
-class VerseNeighborhoodNotFound(GraphServiceError):
+class VerseNeighborhoodNotFoundError(GraphServiceError):
     """Raised when a verse or canonical node does not exist."""
 
 
@@ -84,19 +85,19 @@ class GraphQueryService:
         records = await self._run(self.CYPHER_BY_VERSE_ID, {"verse_id": verse_id})
         result = self._build_neighborhood(records)
         if result.canonical.cvk != expected_cvk:
-            raise VerseNeighborhoodNotFound(verse_id)
+            raise VerseNeighborhoodNotFoundError(verse_id)
         if not any(r.translation.upper() == translation.upper() for r in result.renditions):
-            raise VerseNeighborhoodNotFound(verse_id)
+            raise VerseNeighborhoodNotFoundError(verse_id)
         return result
 
-    async def _run(self, query: str, params: Dict[str, Any]) -> List[Dict[str, Any]]:
+    async def _run(self, query: str, params: dict[str, Any]) -> list[dict[str, Any]]:
         result = await self._session.run(query, **params)
         return await result.data()
 
-    def _build_neighborhood(self, records: Iterable[Dict[str, Any]]) -> GraphNeighborhood:
+    def _build_neighborhood(self, records: Iterable[dict[str, Any]]) -> GraphNeighborhood:
         first = next(iter(records), None)
         if not first:
-            raise VerseNeighborhoodNotFound("neighborhood")
+            raise VerseNeighborhoodNotFoundError("neighborhood")
 
         try:
             canonical = CanonicalVerse(
@@ -129,19 +130,19 @@ class GraphQueryService:
     def _normalize_cvk(self, cvk: str) -> str:
         parts = cvk.strip().split(":")
         if len(parts) < 3:
-            raise InvalidVerseIdentifier(cvk)
+            raise InvalidVerseIdentifierError(cvk)
         suffix = parts[3] if len(parts) > 3 else ""
         try:
             book, chapter, verse = (int(parts[0]), int(parts[1]), int(parts[2]))
         except ValueError as exc:
-            raise InvalidVerseIdentifier(cvk) from exc
+            raise InvalidVerseIdentifierError(cvk) from exc
         return _cv_key(book, chapter, verse, suffix)
 
-    def _compose_verse_id(self, translation: str, verse_fragment: str) -> Tuple[str, str]:
+    def _compose_verse_id(self, translation: str, verse_fragment: str) -> tuple[str, str]:
         cleaned_translation = translation.strip()
         cleaned_fragment = verse_fragment.strip()
         if not cleaned_translation or not cleaned_fragment:
-            raise InvalidVerseIdentifier(verse_fragment)
+            raise InvalidVerseIdentifierError(verse_fragment)
 
         normalized_fragment = cleaned_fragment.replace(":", "_")
         if not normalized_fragment.upper().startswith(f"{cleaned_translation.upper()}_"):
@@ -151,13 +152,13 @@ class GraphQueryService:
 
         parts = verse_id.split("_")
         if len(parts) < 4:
-            raise InvalidVerseIdentifier(verse_fragment)
+            raise InvalidVerseIdentifierError(verse_fragment)
         try:
             book = int(parts[1])
             chapter = int(parts[2])
             verse = int(parts[3])
         except ValueError as exc:
-            raise InvalidVerseIdentifier(verse_fragment) from exc
+            raise InvalidVerseIdentifierError(verse_fragment) from exc
         suffix = parts[4] if len(parts) > 4 else ""
         cvk = _cv_key(book, chapter, verse, suffix)
         return verse_id, cvk

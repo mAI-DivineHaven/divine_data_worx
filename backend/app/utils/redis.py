@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Optional
 
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
@@ -13,11 +12,11 @@ from .logging import get_logger
 
 logger = get_logger(__name__)
 
-_redis_client: Optional[Redis] = None
+_redis_client: Redis | None = None
 _redis_lock = asyncio.Lock()
 
 
-async def get_redis_client(redis_url: str) -> Optional[Redis]:
+async def get_redis_client(redis_url: str) -> Redis | None:
     """Return a cached Redis client instance or ``None`` when unavailable."""
 
     if not redis_url:
@@ -38,9 +37,7 @@ async def get_redis_client(redis_url: str) -> Optional[Redis]:
                 health_check_interval=settings.REDIS_HEALTH_CHECK_INTERVAL,
                 max_connections=settings.REDIS_MAX_CONNECTIONS,
                 socket_timeout=_optional_timeout(settings.REDIS_SOCKET_TIMEOUT),
-                socket_connect_timeout=_optional_timeout(
-                    settings.REDIS_SOCKET_CONNECT_TIMEOUT
-                ),
+                socket_connect_timeout=_optional_timeout(settings.REDIS_SOCKET_CONNECT_TIMEOUT),
                 retry_on_timeout=settings.REDIS_RETRY_ON_TIMEOUT,
                 socket_keepalive=settings.REDIS_SOCKET_KEEPALIVE,
                 client_name=settings.REDIS_CLIENT_NAME or None,

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
 import asyncpg
+from fastapi import APIRouter, Depends
 
 from ..db.postgres_async import get_pg
 from ..models import (
@@ -92,4 +92,3 @@ async def lookup_embeddings(
 
     service = BatchService(conn)
     return await service.lookup_embeddings(payload)
-

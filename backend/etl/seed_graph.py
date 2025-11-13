@@ -25,7 +25,6 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Optional, Set
 
 from dotenv import load_dotenv
 from opentelemetry import trace
@@ -36,12 +35,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from backend.app.config import Settings
-from backend.app.utils.logging import configure_logging, get_logger
-from backend.app.utils.observability import configure_tracing
+from neo4j_client import Neo4jClient  # noqa: E402
+from pg_client import PgClient  # noqa: E402
 
-from pg_client import PgClient
-from neo4j_client import Neo4jClient
+from backend.app.config import Settings  # noqa: E402
+from backend.app.utils.logging import configure_logging, get_logger  # noqa: E402
+from backend.app.utils.observability import configure_tracing  # noqa: E402
 
 # Load environment variables from .env file
 load_dotenv()
@@ -102,7 +101,7 @@ if ETL_METRICS_ENABLED:
     )
 
 
-def read_manifest(path: str) -> Optional[dict]:
+def read_manifest(path: str) -> dict | None:
     """
     Load and parse the manifest JSON file if it exists.
 
@@ -176,7 +175,7 @@ async def run_async(batch_size: int, link_mode: str) -> None:
             await loop.run_in_executor(None, g.init_constraints)
 
             total_rows = 0
-            touched_cvks: Set[str] = set()
+            touched_cvks: set[str] = set()
 
             logger.info(
                 "starting_upserts",

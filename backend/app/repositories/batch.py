@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import List, Sequence
+from collections.abc import Sequence
 
 import asyncpg
 
@@ -15,7 +15,7 @@ class BatchRepository:
     def __init__(self, conn: asyncpg.Connection) -> None:
         self.conn = conn
 
-    async def fetch_verses_by_ids(self, verse_ids: Sequence[str]) -> List[asyncpg.Record]:
+    async def fetch_verses_by_ids(self, verse_ids: Sequence[str]) -> list[asyncpg.Record]:
         """Return verse rows for the provided verse IDs, preserving input order."""
 
         if not verse_ids:
@@ -44,7 +44,7 @@ class BatchRepository:
         self,
         references: Sequence[CanonicalVerseRef],
         translations: Sequence[str],
-    ) -> List[asyncpg.Record]:
+    ) -> list[asyncpg.Record]:
         """Return translation comparison rows for the supplied references."""
 
         if not references or not translations:
@@ -105,7 +105,7 @@ class BatchRepository:
 
     async def fetch_embeddings_by_ids(
         self, verse_ids: Sequence[str], model: str | None
-    ) -> List[asyncpg.Record]:
+    ) -> list[asyncpg.Record]:
         """Return embedding rows for the specified verse IDs."""
 
         if not verse_ids:
@@ -136,4 +136,3 @@ class BatchRepository:
                 verse_ids_list,
             )
         return rows
-

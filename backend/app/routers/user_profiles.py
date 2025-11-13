@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
 from uuid import UUID
 
 import asyncpg
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from ..db.postgres_async import get_pg
+from ..repositories.users import ConversationRepository, UserRepository
 from ..schemas.users import (
     ConversationCreate,
     ConversationDetail,
@@ -22,9 +22,7 @@ from ..schemas.users import (
     UserRole,
     UserSummary,
 )
-from ..repositories.users import ConversationRepository, UserRepository
 from ..services.profile_privacy import Viewer, filter_profile_fields
-
 
 router = APIRouter(tags=["users"])
 
@@ -40,7 +38,7 @@ def _record_to_summary(row: asyncpg.Record) -> UserSummary:
     )
 
 
-def _row_to_profile(row: asyncpg.Record) -> Optional[ProfileSurvey]:
+def _row_to_profile(row: asyncpg.Record) -> ProfileSurvey | None:
     if row is None:
         return None
     if row["bio"] is None and row["share_preferences"] is None:
@@ -145,8 +143,8 @@ async def update_share_settings(
 async def fetch_profile(
     user_id: UUID,
     request: Request,
-    viewer_id: Optional[UUID] = Query(default=None),
-    viewer_role: Optional[str] = Query(default=None),
+    viewer_id: UUID | None = Query(default=None),
+    viewer_role: str | None = Query(default=None),
     pg: asyncpg.Connection = Depends(get_pg),
 ):
     """Retrieve a profile filtered according to visibility preferences."""
@@ -158,7 +156,7 @@ async def fetch_profile(
     viewer = _viewer_from_request(request, fallback_id=viewer_id, fallback_role=viewer_role)
 
     profile = _row_to_profile(row)
-    share_prefs = (profile.share_preferences if profile else {})
+    share_prefs = profile.share_preferences if profile else {}
 
     filtered_profile, hidden = filter_profile_fields(
         owner_id=row["user_id"],
@@ -186,7 +184,7 @@ async def create_conversation(
     return ConversationSummary(**row)
 
 
-@router.get("/users/{user_id}/conversations", response_model=List[ConversationSummary])
+@router.get("/users/{user_id}/conversations", response_model=list[ConversationSummary])
 async def list_conversations(
     user_id: UUID,
     request: Request,
@@ -247,8 +245,8 @@ async def append_message(
 
 def _viewer_from_request(
     request: Request,
-    fallback_id: Optional[UUID] = None,
-    fallback_role: Optional[str] = None,
+    fallback_id: UUID | None = None,
+    fallback_role: str | None = None,
 ) -> Viewer:
     """Extract viewer context from JWT middleware or query params."""
 

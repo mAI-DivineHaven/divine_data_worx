@@ -30,7 +30,7 @@ import asyncpg
 from fastapi import APIRouter, Depends, HTTPException
 
 from ..db.postgres_async import get_pg
-from ..models import FTSQuery, VectorQuery, HybridQuery, SearchResponse
+from ..models import FTSQuery, HybridQuery, SearchResponse, VectorQuery
 from ..services.search_api import SearchApiService
 
 router = APIRouter(prefix="/search", tags=["search"])

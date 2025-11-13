@@ -6,7 +6,6 @@ Tests cover:
 - GET /v1/chunks/{chunk_id} - Get specific chunk by ID
 """
 
-import pytest
 from fastapi.testclient import TestClient
 
 
@@ -17,12 +16,7 @@ class TestChunkSearch:
         """Should perform chunk-based semantic search."""
         response = client.post(
             "/v1/chunks/search",
-            json={
-                "embedding": [0.1] * 768,
-                "model": "embeddinggemma",
-                "dim": 768,
-                "top_k": 10
-            }
+            json={"embedding": [0.1] * 768, "model": "embeddinggemma", "dim": 768, "top_k": 10},
         )
 
         assert response.status_code == 200
@@ -36,12 +30,7 @@ class TestChunkSearch:
         """Should filter chunks by translation."""
         response = client.post(
             "/v1/chunks/search",
-            json={
-                "embedding": [0.1] * 768,
-                "dim": 768,
-                "translation": "NIV",
-                "top_k": 5
-            }
+            json={"embedding": [0.1] * 768, "dim": 768, "translation": "NIV", "top_k": 5},
         )
 
         assert response.status_code == 200
@@ -55,12 +44,7 @@ class TestChunkSearch:
         """Should filter chunks by book number."""
         response = client.post(
             "/v1/chunks/search",
-            json={
-                "embedding": [0.1] * 768,
-                "dim": 768,
-                "book_number": 1,  # Genesis
-                "top_k": 5
-            }
+            json={"embedding": [0.1] * 768, "dim": 768, "book_number": 1, "top_k": 5},  # Genesis
         )
 
         assert response.status_code == 200
@@ -74,12 +58,7 @@ class TestChunkSearch:
         """Should filter chunks by testament."""
         response = client.post(
             "/v1/chunks/search",
-            json={
-                "embedding": [0.1] * 768,
-                "dim": 768,
-                "testament": "Old",
-                "top_k": 5
-            }
+            json={"embedding": [0.1] * 768, "dim": 768, "testament": "Old", "top_k": 5},
         )
 
         assert response.status_code == 200
@@ -90,12 +69,7 @@ class TestChunkSearch:
         """Should filter chunks by window size."""
         response = client.post(
             "/v1/chunks/search",
-            json={
-                "embedding": [0.1] * 768,
-                "dim": 768,
-                "window_size": 5,
-                "top_k": 5
-            }
+            json={"embedding": [0.1] * 768, "dim": 768, "window_size": 5, "top_k": 5},
         )
 
         assert response.status_code == 200
@@ -110,12 +84,7 @@ class TestChunkSearch:
         """Should include context when requested."""
         response = client.post(
             "/v1/chunks/search",
-            json={
-                "embedding": [0.1] * 768,
-                "dim": 768,
-                "include_context": True,
-                "top_k": 3
-            }
+            json={"embedding": [0.1] * 768, "dim": 768, "include_context": True, "top_k": 3},
         )
 
         assert response.status_code == 200
@@ -131,22 +100,12 @@ class TestChunkSearch:
         """Should support pagination with offset."""
         response1 = client.post(
             "/v1/chunks/search",
-            json={
-                "embedding": [0.1] * 768,
-                "dim": 768,
-                "top_k": 5,
-                "offset": 0
-            }
+            json={"embedding": [0.1] * 768, "dim": 768, "top_k": 5, "offset": 0},
         )
 
         response2 = client.post(
             "/v1/chunks/search",
-            json={
-                "embedding": [0.1] * 768,
-                "dim": 768,
-                "top_k": 5,
-                "offset": 5
-            }
+            json={"embedding": [0.1] * 768, "dim": 768, "top_k": 5, "offset": 5},
         )
 
         assert response1.status_code == 200
@@ -156,11 +115,7 @@ class TestChunkSearch:
         """Should reject embedding with wrong dimensionality."""
         response = client.post(
             "/v1/chunks/search",
-            json={
-                "embedding": [0.1] * 384,  # Wrong dimension
-                "dim": 768,
-                "top_k": 5
-            }
+            json={"embedding": [0.1] * 384, "dim": 768, "top_k": 5},  # Wrong dimension
         )
 
         assert response.status_code == 422
@@ -168,12 +123,7 @@ class TestChunkSearch:
     def test_chunk_search_response_structure(self, client: TestClient):
         """Should return properly structured chunk results."""
         response = client.post(
-            "/v1/chunks/search",
-            json={
-                "embedding": [0.1] * 768,
-                "dim": 768,
-                "top_k": 2
-            }
+            "/v1/chunks/search", json={"embedding": [0.1] * 768, "dim": 768, "top_k": 2}
         )
 
         assert response.status_code == 200

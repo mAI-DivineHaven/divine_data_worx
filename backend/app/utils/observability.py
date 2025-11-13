@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict, Optional
 
 try:
     from opentelemetry import trace
@@ -32,8 +31,8 @@ _logger = logging.getLogger(__name__)
 _TRACING_INITIALIZED = False
 
 
-def _parse_otlp_headers(header_str: str) -> Dict[str, str]:
-    headers: Dict[str, str] = {}
+def _parse_otlp_headers(header_str: str) -> dict[str, str]:
+    headers: dict[str, str] = {}
     for pair in header_str.split(","):
         if not pair.strip():
             continue
@@ -47,8 +46,8 @@ def _parse_otlp_headers(header_str: str) -> Dict[str, str]:
 def configure_tracing(
     settings,
     service_name: str,
-    service_version: Optional[str] = None,
-) -> Optional[object]:
+    service_version: str | None = None,
+) -> object | None:
     """Configure and register the OpenTelemetry tracer provider."""
 
     global _TRACING_INITIALIZED
@@ -94,7 +93,9 @@ def configure_tracing(
                 headers=headers if headers else None,
             )
     except Exception:  # noqa: BLE001
-        _logger.exception("failed_to_configure_tracing_exporter", extra={"exporter": exporter_choice})
+        _logger.exception(
+            "failed_to_configure_tracing_exporter", extra={"exporter": exporter_choice}
+        )
         return None
 
     if exporter is None:

@@ -9,8 +9,8 @@ from ..db.neo4j import get_neo4j_session
 from ..models import GraphNeighborhood
 from ..services.graph import (
     GraphQueryService,
-    InvalidVerseIdentifier,
-    VerseNeighborhoodNotFound,
+    InvalidVerseIdentifierError,
+    VerseNeighborhoodNotFoundError,
 )
 
 router = APIRouter(prefix="/graph", tags=["graph"])
@@ -31,12 +31,12 @@ async def get_verse_neighborhood(
 
     try:
         return await service.neighborhood_by_cvk(cv_id)
-    except InvalidVerseIdentifier as exc:  # pragma: no cover - defensive
+    except InvalidVerseIdentifierError as exc:  # pragma: no cover - defensive
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="invalid canonical verse identifier",
         ) from exc
-    except VerseNeighborhoodNotFound as exc:
+    except VerseNeighborhoodNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="canonical verse not found",
@@ -53,12 +53,12 @@ async def get_parallel_neighborhood(
 
     try:
         return await service.neighborhood_for_translation_verse(translation, verse)
-    except InvalidVerseIdentifier as exc:
+    except InvalidVerseIdentifierError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="invalid verse identifier",
         ) from exc
-    except VerseNeighborhoodNotFound as exc:
+    except VerseNeighborhoodNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="verse not found",

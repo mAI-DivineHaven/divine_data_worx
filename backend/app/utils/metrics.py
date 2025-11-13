@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import time
-from typing import Optional
 
 from prometheus_client import (  # type: ignore
     CONTENT_TYPE_LATEST,
@@ -96,9 +95,9 @@ class QueryTimer:
 
     def __init__(self, label: str) -> None:
         self.label = label
-        self._start: Optional[float] = None
+        self._start: float | None = None
 
-    def __enter__(self) -> "QueryTimer":
+    def __enter__(self) -> QueryTimer:
         self._start = time.perf_counter()
         return self
 

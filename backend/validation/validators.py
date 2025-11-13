@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, Mapping, Optional
+from collections.abc import Mapping
 
 from .models import ManifestMetadata, ValidationResult, VerseMetrics
 
@@ -51,17 +51,13 @@ def validate_embedding_completeness(
             continue
         missing = metrics.missing_text_count()
         if metrics.verse_count == 0:
-            errors.append(
-                f"Cannot embed translation '{translation}' because it has zero verses"
-            )
+            errors.append(f"Cannot embed translation '{translation}' because it has zero verses")
             continue
         ratio = missing / metrics.verse_count
         if ratio > allow_empty_ratio:
             errors.append(
-                "Translation '{translation}' has {missing} verses with empty text, "
-                "exceeding the allowed ratio of {allow_empty_ratio:.2%}".format(
-                    translation=translation, missing=missing, allow_empty_ratio=allow_empty_ratio
-                )
+                f"Translation '{translation}' has {missing} verses with empty text, "
+                f"exceeding the allowed ratio of {allow_empty_ratio:.2%}"
             )
     passed = not errors
     return ValidationResult(
@@ -74,7 +70,7 @@ def validate_embedding_completeness(
 def validate_graph_edge_integrity(
     manifest: ManifestMetadata,
     verse_metrics: Mapping[str, VerseMetrics],
-    base_translation: Optional[str] = None,
+    base_translation: str | None = None,
     max_missing_ratio: float = 0.02,
 ) -> ValidationResult:
     """Check that canonical verse coverage supports building cross-translation edges."""
@@ -116,13 +112,8 @@ def validate_graph_edge_integrity(
             sample = sorted(missing_keys)[:5]
             preview = ", ".join(sample)
             errors.append(
-                "Translation '{translation}' is missing {missing} canonical keys (sample: {sample}) "
-                "exceeding allowed gap of {max_missing_ratio:.2%}".format(
-                    translation=translation,
-                    missing=len(missing_keys),
-                    sample=preview,
-                    max_missing_ratio=max_missing_ratio,
-                )
+                f"Translation '{translation}' is missing {len(missing_keys)} canonical keys (sample: {preview}) "
+                f"exceeding allowed gap of {max_missing_ratio:.2%}"
             )
     passed = not errors
     return ValidationResult(

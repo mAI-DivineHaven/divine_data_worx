@@ -28,15 +28,17 @@ import re
 import sys
 import textwrap
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Tuple
+from typing import Any, Literal
 
 import typer
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from backend.validation import (
     ManifestMetadata as ValidationManifest,
+)
+from backend.validation import (
     collect_verse_metrics,
     validate_embedding_completeness,
     validate_graph_edge_integrity,
@@ -61,8 +63,8 @@ app = typer.Typer(add_completion=False, help="DivineHaven — Manifest & DB CLI"
 # ---------------------------
 class Chunking(BaseModel):
     granularity: Literal["verse", "pericope", "sliding"] = "sliding"
-    window_size: Optional[int] = Field(default=None, ge=1)
-    stride: Optional[int] = Field(default=None, ge=1)
+    window_size: int | None = Field(default=None, ge=1)
+    stride: int | None = Field(default=None, ge=1)
 
     @field_validator("stride")
     @classmethod
@@ -80,8 +82,8 @@ class Preprocess(BaseModel):
 
 
 class Filters(BaseModel):
-    books_included: Optional[List[int]] | Literal["all"] = "all"
-    translations_included: Optional[List[str]] = None
+    books_included: list[int] | None | Literal["all"] = "all"
+    translations_included: list[str] | None = None
 
 
 class EmbeddingRecipe(BaseModel):
@@ -89,7 +91,7 @@ class EmbeddingRecipe(BaseModel):
     embedding_dim: int = Field(ge=1)
     pooling: Literal["mean", "max", "cls"] = "mean"
     normalize: bool = True
-    tokenizer: Optional[str] = None
+    tokenizer: str | None = None
     truncation_strategy: Literal["none", "sliding", "head", "tail"] = "sliding"
     chunking: Chunking
     preprocess: Preprocess = Preprocess()
@@ -98,14 +100,14 @@ class EmbeddingRecipe(BaseModel):
 
 class VectorScaleHNSW(BaseModel):
     type: Literal["hnsw"] = "hnsw"
-    params: Dict[str, int] = Field(
+    params: dict[str, int] = Field(
         default_factory=lambda: {"m": 32, "ef_construction": 200, "ef_search": 64}
     )
 
 
 class VectorScaleIVF(BaseModel):
     type: Literal["ivf"] = "ivf"
-    params: Dict[str, int] = Field(default_factory=lambda: {"lists": 2048, "probes": 8})
+    params: dict[str, int] = Field(default_factory=lambda: {"lists": 2048, "probes": 8})
 
 
 VectorScaleCfg = VectorScaleHNSW | VectorScaleIVF
@@ -113,7 +115,7 @@ VectorScaleCfg = VectorScaleHNSW | VectorScaleIVF
 
 class FTSOptions(BaseModel):
     dictionary: Literal["simple", "english"] = "simple"
-    stopwords: Optional[str] = None
+    stopwords: str | None = None
 
 
 class GraphExpansionOptions(BaseModel):
@@ -125,10 +127,8 @@ class GraphExpansionOptions(BaseModel):
 class FusionOptions(BaseModel):
     method: Literal["rrf", "weighted_sum"] = "rrf"
     k: int = 60
-    weight_vector: Optional[Dict[str, float]] = None  # if weighted_sum
-    graph_expansion: GraphExpansionOptions = Field(
-        default_factory=GraphExpansionOptions
-    )
+    weight_vector: dict[str, float] | None = None  # if weighted_sum
+    graph_expansion: GraphExpansionOptions = Field(default_factory=GraphExpansionOptions)
 
 
 class HybridOptions(BaseModel):
@@ -146,10 +146,10 @@ class IndexPlan(BaseModel):
 class BatchEntry(BaseModel):
     input: str
     mapping: str
-    sha256_input: Optional[str] = None
-    sha256_mapping: Optional[str] = None
-    item_count: Optional[int] = None
-    skipped_count: Optional[int] = None
+    sha256_input: str | None = None
+    sha256_mapping: str | None = None
+    item_count: int | None = None
+    skipped_count: int | None = None
 
 
 class Manifest(BaseModel):
@@ -157,15 +157,15 @@ class Manifest(BaseModel):
     run_ts: datetime
     pipeline_version: str
     source_version: str
-    translation_set: List[str]
-    languages: List[str]
-    license: Optional[str] = None
-    operator: Optional[str] = None
+    translation_set: list[str]
+    languages: list[str]
+    license: str | None = None
+    operator: str | None = None
 
     embedding_recipe: EmbeddingRecipe
     index_plan: IndexPlan
 
-    batches: List[BatchEntry]
+    batches: list[BatchEntry]
 
 
 # ---------------------------
@@ -185,7 +185,7 @@ def sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
-def _lang_label(lang: Optional[str]) -> int:
+def _lang_label(lang: str | None) -> int:
     """Stable smallint mapping for labels[0]. Extend as needed."""
     if not lang:
         return 0
@@ -193,7 +193,7 @@ def _lang_label(lang: Optional[str]) -> int:
     return table.get(lang.lower(), 0)
 
 
-def _testament_label(testament: Optional[str]) -> int:
+def _testament_label(testament: str | None) -> int:
     """Stable smallint mapping for labels[1]."""
     if not testament:
         return 0
@@ -201,7 +201,7 @@ def _testament_label(testament: Optional[str]) -> int:
     return 1 if t.startswith("old") else (2 if t.startswith("new") else 0)
 
 
-def _vec_literal(vec: List[float], precision: int = 6) -> str:
+def _vec_literal(vec: list[float], precision: int = 6) -> str:
     fmt = f"{{:.{precision}f}}"
     return "[" + ",".join(fmt.format(x) for x in vec) + "]"
 
@@ -378,7 +378,7 @@ class VectorIndexPlanner:
         table: str,
         column: str,
         with_labels: bool = True,
-        index_name: Optional[str] = None,
+        index_name: str | None = None,
     ) -> str:
         """
         Return SQL to create an ANN index for a (table, column) pair.
@@ -388,9 +388,7 @@ class VectorIndexPlanner:
         """
         idx = index_name or f"{table}_{column}_ann_idx"
         cols = (
-            f"{column} vector_cosine_ops, labels"
-            if with_labels
-            else f"{column} vector_cosine_ops"
+            f"{column} vector_cosine_ops, labels" if with_labels else f"{column} vector_cosine_ops"
         )
 
         # Primary: Vectorscale DiskANN (cosine)
@@ -413,16 +411,8 @@ CREATE INDEX IF NOT EXISTS {idx}
 --   SET hnsw.ef_search = {efs};"""
             return diskann_sql + "\n" + hnsw_sql
 
-        lists = (
-            self.cfg.params.get("lists", 2048)
-            if isinstance(self.cfg, VectorScaleIVF)
-            else 2048
-        )
-        probes = (
-            self.cfg.params.get("probes", 8)
-            if isinstance(self.cfg, VectorScaleIVF)
-            else 8
-        )
+        lists = self.cfg.params.get("lists", 2048) if isinstance(self.cfg, VectorScaleIVF) else 2048
+        probes = self.cfg.params.get("probes", 8) if isinstance(self.cfg, VectorScaleIVF) else 8
         ivf_sql = f"""
 -- pgvector IVFFlat fallback (cosine):
 -- CREATE INDEX IF NOT EXISTS {idx}
@@ -437,9 +427,7 @@ CREATE INDEX IF NOT EXISTS {idx}
 # CLI: Validate & Summary
 # ---------------------------
 @app.command()
-def validate(
-    manifest_path: Path = typer.Argument(..., exists=True, readable=True)
-) -> None:
+def validate(manifest_path: Path = typer.Argument(..., exists=True, readable=True)) -> None:
     """Validate a manifest and print a compact summary."""
     try:
         manifest = load_manifest(manifest_path)
@@ -451,29 +439,42 @@ def validate(
     typer.secho("Manifest looks good ✔", fg=typer.colors.GREEN, bold=True)
     typer.echo(
         textwrap.dedent(
-            r"""
-            run_id:          {manifest.run_id}
-            run_ts:          {manifest.run_ts.isoformat()}
-            pipeline_version:{manifest.pipeline_version}
-            source_version:  {manifest.source_version}
-            translations:    {', '.join(manifest.translation_set)}
-            languages:       {', '.join(manifest.languages)}
-            batches:         {len(manifest.batches)}
-
-            embedding_model: {manifest.embedding_recipe.embedding_model}
-            embedding_dim:   {manifest.embedding_recipe.embedding_dim}
-            chunking:        {manifest.embedding_recipe.chunking.model_dump()}
-            fusion:          {manifest.index_plan.hybrid.fusion.model_dump()}
-            vectorscale:     {manifest.index_plan.vectorscale.model_dump()}
             """
-        ).strip()
+            run_id:          {run_id}
+            run_ts:          {run_ts}
+            pipeline_version:{pipeline_version}
+            source_version:  {source_version}
+            translations:    {translations}
+            languages:       {languages}
+            batches:         {batches}
+
+            embedding_model: {embedding_model}
+            embedding_dim:   {embedding_dim}
+            chunking:        {chunking}
+            fusion:          {fusion}
+            vectorscale:     {vectorscale}
+            """
+        )
+        .strip()
+        .format(
+            run_id=manifest.run_id,
+            run_ts=manifest.run_ts.isoformat(),
+            pipeline_version=manifest.pipeline_version,
+            source_version=manifest.source_version,
+            translations=", ".join(manifest.translation_set),
+            languages=", ".join(manifest.languages),
+            batches=len(manifest.batches),
+            embedding_model=manifest.embedding_recipe.embedding_model,
+            embedding_dim=manifest.embedding_recipe.embedding_dim,
+            chunking=manifest.embedding_recipe.chunking.model_dump(),
+            fusion=manifest.index_plan.hybrid.fusion.model_dump(),
+            vectorscale=manifest.index_plan.vectorscale.model_dump(),
+        )
     )
 
 
 @app.command("summary")
-def summary_cmd(
-    manifest_path: Path = typer.Argument(..., exists=True, readable=True)
-) -> None:
+def summary_cmd(manifest_path: Path = typer.Argument(..., exists=True, readable=True)) -> None:
     """Print a richer summary with per-batch stats and inferred totals."""
     manifest = load_manifest(manifest_path)
 
@@ -521,7 +522,7 @@ def plan_indexes(
     planner = VectorIndexPlanner(m.index_plan.vectorscale)
 
     fts_dict = m.index_plan.hybrid.fts.dictionary
-    
+
     statements = [
         planner.emit("verse_embedding", "embedding", with_labels=True),
         planner.emit("chunk_embedding", "embedding", with_labels=True),
@@ -531,7 +532,7 @@ CREATE INDEX IF NOT EXISTS verse_text_gin
   ON verse USING GIN (to_tsvector('{fts_dict}', text));
 -- Rebuild (optional):
 -- DROP INDEX CONCURRENTLY IF EXISTS verse_text_gin;
--- CREATE INDEX CONCURRENTLY IF NOT EXISTS verse_text_gin ON verse USING GIN (to_tsvector('{fts_dict}', text));"""
+-- CREATE INDEX CONCURRENTLY IF NOT EXISTS verse_text_gin ON verse USING GIN (to_tsvector('{fts_dict}', text));""",
     ]
 
     typer.secho("-- Index Plan (apply in psql)", fg=typer.colors.CYAN, bold=True)
@@ -592,9 +593,7 @@ def register_run(
 @app.command("checksum-batches")
 def checksum_batches(
     manifest_path: Path = typer.Argument(..., exists=True, readable=True),
-    base_dir: Optional[Path] = typer.Option(
-        None, help="Base directory to resolve batch paths"
-    ),
+    base_dir: Path | None = typer.Option(None, help="Base directory to resolve batch paths"),
     write_back: bool = typer.Option(
         False, help="If true, write sha256 values back to manifest.json"
     ),
@@ -644,7 +643,7 @@ def pre_ingest_validate(
         "-c",
         help="Directory containing translation JSON payloads",
     ),
-    base_translation: Optional[str] = typer.Option(
+    base_translation: str | None = typer.Option(
         None,
         "--base-translation",
         help="Translation code to use as canonical baseline when checking graph edges",
@@ -713,9 +712,7 @@ def pre_ingest_validate(
 @app.command("ingest")
 def ingest_bible(
     json_path: Path = typer.Option(..., "--json", help="Path to universal JSON file"),
-    translation: str = typer.Option(
-        ..., "--translation", help="Translation code, e.g., NIV / TNK"
-    ),
+    translation: str = typer.Option(..., "--translation", help="Translation code, e.g., NIV / TNK"),
     source_version: str = typer.Option(
         ..., "--source-version", help="e.g., divine_haven.universal_v1"
     ),
@@ -724,7 +721,7 @@ def ingest_bible(
         "--dsn",
         help="Postgres DSN",
     ),
-    language: Optional[str] = typer.Option(None, "--language"),
+    language: str | None = typer.Option(None, "--language"),
     batch_size: int = typer.Option(1000, "--batch-size", min=100, max=5000),
 ) -> None:
     """Ingest a universal JSON Bible into Postgres (idempotent upserts) with robust verse de-duplication."""
@@ -781,8 +778,7 @@ def ingest_bible(
             )
 
             book_rows = [
-                (db_translation_code, b["number"], b["name"], b["testament"])
-                for b in books
+                (db_translation_code, b["number"], b["name"], b["testament"]) for b in books
             ]
             if book_rows:
                 psycopg_rows = ",".join(["(%s,%s,%s,%s)"] * len(book_rows))
@@ -796,8 +792,8 @@ def ingest_bible(
                     list(itertools.chain.from_iterable(book_rows)),
                 )
 
-            chapter_rows: List[Tuple[str, int, int]] = []
-            verse_rows: List[Tuple[str, int, int, int, str, str, str, str]] = []
+            chapter_rows: list[tuple[str, int, int]] = []
+            verse_rows: list[tuple[str, int, int, int, str, str, str, str]] = []
 
             for b in books:
                 bnum = b["number"]
@@ -805,7 +801,7 @@ def ingest_bible(
                     cnum = ch["number"]
                     chapter_rows.append((db_translation_code, bnum, cnum))
 
-                    used_suffixes: Dict[Tuple[int, int, int], set] = {}
+                    used_suffixes: dict[tuple[int, int, int], set] = {}
                     for v in ch["verses"]:
                         vnum = v["number"]
                         text_val = v.get("text", "")
@@ -834,9 +830,7 @@ def ingest_bible(
                         used_suffixes[key].add(sfx)
 
                         ck = hashlib.sha256(
-                            f"{db_translation_code}|{bnum}|{cnum}|{vnum}|{sfx}|{text_val}".encode(
-                                "utf-8"
-                            )
+                            f"{db_translation_code}|{bnum}|{cnum}|{vnum}|{sfx}|{text_val}".encode()
                         ).hexdigest()
 
                         verse_rows.append(
@@ -853,9 +847,9 @@ def ingest_bible(
                         )
 
             if verse_rows:
-                uniq: Dict[
-                    Tuple[str, int, int, int, str],
-                    Tuple[str, int, int, int, str, str, str, str],
+                uniq: dict[
+                    tuple[str, int, int, int, str],
+                    tuple[str, int, int, int, str, str, str, str],
                 ] = {}
                 for row in verse_rows:
                     pk = (row[0], row[1], row[2], row[3], row[5])
@@ -933,9 +927,7 @@ def check_ingest(
             for r in cur.fetchall():
                 typer.echo(f"  {r[0]} {r[1]}")
 
-            typer.secho(
-                "\nVerse counts by translation:", fg=typer.colors.CYAN, bold=True
-            )
+            typer.secho("\nVerse counts by translation:", fg=typer.colors.CYAN, bold=True)
             cur.execute(
                 """
                 SELECT translation_code, COUNT(*) AS verses
@@ -971,9 +963,7 @@ def check_ingest(
             )
             typer.echo(f"  {cur.fetchone()[0]}")  # type: ignore
 
-            typer.secho(
-                "\nEmpty verse text (should be 0):", fg=typer.colors.CYAN, bold=True
-            )
+            typer.secho("\nEmpty verse text (should be 0):", fg=typer.colors.CYAN, bold=True)
             cur.execute("SELECT COUNT(*) FROM verse WHERE text IS NULL OR text='';")
             typer.echo(f"  {cur.fetchone()[0]}")  # type: ignore
 
@@ -996,9 +986,7 @@ def check_ingest(
             )
             rows = cur.fetchall()
             for t, verses, embedded, missing in rows:
-                typer.echo(
-                    f"  {t}: verses={verses} embedded={embedded} missing={missing}"
-                )
+                typer.echo(f"  {t}: verses={verses} embedded={embedded} missing={missing}")
 
             typer.secho("\nEmbedding model/dim mix:", fg=typer.colors.CYAN, bold=True)
             cur.execute(
@@ -1029,13 +1017,13 @@ def check_ingest(
 # ✨ CLI: Embed verses with Ollama (optimized)
 # ---------------------------
 async def _embed_batch_async(
-    session: "aiohttp.ClientSession",  # type: ignore
+    session: aiohttp.ClientSession,  # type: ignore
     api_base: str,
     model: str,
-    texts: List[str],
+    texts: list[str],
     keep_alive: str = "5m",
     truncate: bool = True,
-) -> List[List[float]]:
+) -> list[list[float]]:
     url = api_base.rstrip("/") + "/api/embed"
     payload = {
         "model": model,
@@ -1054,20 +1042,18 @@ async def _embed_batch_async(
 def _embed_batch_sync(
     api_base: str,
     model: str,
-    texts: List[str],
+    texts: list[str],
     keep_alive: str = "5m",
     truncate: bool = True,
-) -> List[List[float]]:
-    import urllib.request
+) -> list[list[float]]:
     import urllib.error
+    import urllib.request
 
     url = api_base.rstrip("/") + "/api/embed"
     payload = json.dumps(
         {"model": model, "input": texts, "keep_alive": keep_alive, "truncate": truncate}
     ).encode("utf-8")
-    req = urllib.request.Request(
-        url, data=payload, headers={"Content-Type": "application/json"}
-    )
+    req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=120) as r:
             return json.loads(r.read().decode("utf-8"))["embeddings"]
@@ -1077,11 +1063,11 @@ def _embed_batch_sync(
         ) from e
 
 
-def _batched_indices(n: int, size: int) -> List[List[int]]:
+def _batched_indices(n: int, size: int) -> list[list[int]]:
     return [list(range(i, min(i + size, n))) for i in range(0, n, size)]
 
 
-def _ensure_stage_and_copy_then_merge(conn, rows: List[Tuple[Any, ...]]) -> None:
+def _ensure_stage_and_copy_then_merge(conn, rows: list[tuple[Any, ...]]) -> None:
     """
     rows: (verse_id, embedding_text, embedding_model, embedding_dim, labels, metadata_json)
     """
@@ -1147,12 +1133,10 @@ async def _embed_worker(
         texts = [r[1] for r in rows]
         embs = await _embed_batch_async(session, api_base, model, texts, keep_alive)
         payload = []
-        ts = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        ts = datetime.now(UTC).isoformat().replace("+00:00", "Z")
         for (verse_id, _t, lang, testament, book_no, tcode), vec in zip(rows, embs):
             if len(vec) != embedding_dim:
-                raise RuntimeError(
-                    f"Dim mismatch for {verse_id}: {len(vec)} != {embedding_dim}"
-                )
+                raise RuntimeError(f"Dim mismatch for {verse_id}: {len(vec)} != {embedding_dim}")
             labels = None
             if use_labels:
                 labels = [_lang_label(lang), _testament_label(testament), int(book_no)]
@@ -1227,19 +1211,18 @@ async def _run_pipeline(
             total = 0
             with psycopg.connect(dsn) as conn:  # type: ignore
                 conn.execute("SET application_name = 'divinehaven-embedder';")
-                pending: List[Tuple[Any, ...]] = []
+                pending: list[tuple[Any, ...]] = []
                 while True:
                     try:
                         payload = await asyncio.wait_for(out_q.get(), timeout=5)
-                    except asyncio.TimeoutError:
+                    except TimeoutError:
                         payload = None
                     if payload:
                         pending.extend(payload)
                         out_q.task_done()
                     # flush in healthy chunks
                     if pending and (
-                        len(pending) >= workers * 32
-                        or (payload is None and in_q.empty())
+                        len(pending) >= workers * 32 or (payload is None and in_q.empty())
                     ):
                         _ensure_stage_and_copy_then_merge(conn, pending)
                         conn.commit()
@@ -1259,16 +1242,14 @@ def embed_verses(
         "--dsn",
         help="Postgres DSN",
     ),
-    model: str = typer.Option(
-        "embeddinggemma", "--model", help="Ollama embedding model"
-    ),
+    model: str = typer.Option("embeddinggemma", "--model", help="Ollama embedding model"),
     embedding_dim: int = typer.Option(768, "--dim", help="Target embedding dimension"),
     api_base: str = typer.Option(
         os.environ.get("OLLAMA_HOST", "http://localhost:11434"),
         "--api-base",
         help="Ollama base URL",
     ),
-    translations: Optional[List[str]] = typer.Option(
+    translations: list[str] | None = typer.Option(
         None, "--translation", help="Filter to these translation codes (repeatable)"
     ),
     reembed: bool = typer.Option(
@@ -1281,19 +1262,13 @@ def embed_verses(
         "--labels/--no-labels",
         help="Compute smallint[] labels [lang, testament, book_number]",
     ),
-    select_limit: Optional[int] = typer.Option(
+    select_limit: int | None = typer.Option(
         None, "--max-rows", help="Cap the number of verses to process"
     ),
-    fetch_page: int = typer.Option(
-        5000, "--fetch-page", help="Rows to fetch per DB page"
-    ),
+    fetch_page: int = typer.Option(5000, "--fetch-page", help="Rows to fetch per DB page"),
     batch_size: int = typer.Option(32, "--batch", help="Texts per /api/embed call"),
-    workers: int = typer.Option(
-        6, "--workers", help="Concurrent HTTP batches (aiohttp)"
-    ),
-    keep_alive: str = typer.Option(
-        "5m", "--keep-alive", help="Keep model in memory on Ollama"
-    ),
+    workers: int = typer.Option(6, "--workers", help="Concurrent HTTP batches (aiohttp)"),
+    keep_alive: str = typer.Option("5m", "--keep-alive", help="Keep model in memory on Ollama"),
     write_mode: str = typer.Option(
         "staging-copy",
         "--write-mode",
@@ -1302,9 +1277,7 @@ def embed_verses(
     precision: int = typer.Option(
         6, "--precision", help="Float precision for vector literal strings"
     ),
-    dry_run: bool = typer.Option(
-        False, "--dry-run", help="Don't write to DB; just count"
-    ),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Don't write to DB; just count"),
 ) -> None:
     """
     Generate embeddings for verses via Ollama /api/embed (batched).
@@ -1333,8 +1306,8 @@ def embed_verses(
         JOIN translation t
           ON t.translation_code = v.translation_code
     """
-    where_parts: List[str] = []
-    params: List[Any] = []
+    where_parts: list[str] = []
+    params: list[Any] = []
 
     # Build the LEFT JOIN first (if needed) so params are in correct order
     if not reembed:
@@ -1349,10 +1322,12 @@ def embed_verses(
         params.append(translations)
 
     where_sql = ("WHERE " + " AND ".join(where_parts)) if where_parts else ""
-    order_sql = " ORDER BY v.translation_code, v.book_number, v.chapter_number, v.verse_number, v.suffix"
+    order_sql = (
+        " ORDER BY v.translation_code, v.book_number, v.chapter_number, v.verse_number, v.suffix"
+    )
     sql_select = sel_base + where_sql + order_sql
 
-    vector_rows: List[Tuple[str, str, Optional[str], Optional[str], int, str]] = []
+    vector_rows: list[tuple[str, str, str | None, str | None, int, str]] = []
     with psycopg.connect(dsn) as conn:
         conn.execute("SET application_name = 'divinehaven-embedder';")
         with conn.cursor() as cur:
@@ -1418,16 +1393,12 @@ def embed_verses(
                                 [texts[i] for i in idxs],
                                 keep_alive,
                             )
-                            upserts: List[Tuple[Any, ...]] = []
-                            ts = (
-                                datetime.now(timezone.utc)
-                                .isoformat()
-                                .replace("+00:00", "Z")
-                            )
+                            upserts: list[tuple[Any, ...]] = []
+                            ts = datetime.now(UTC).isoformat().replace("+00:00", "Z")
                             for j, irow in enumerate(idxs):
-                                verse_id, _textv, lang, testament, book_no, tcode = (
-                                    vector_rows[irow]
-                                )
+                                verse_id, _textv, lang, testament, book_no, tcode = vector_rows[
+                                    irow
+                                ]
                                 vec = embs[j]
                                 if len(vec) != embedding_dim:
                                     raise RuntimeError(
@@ -1492,15 +1463,11 @@ def embed_verses(
             with conn.cursor() as cur:
                 for b in batches:
                     idxs = b
-                    embs = _embed_batch_sync(
-                        api_base, model, [texts[i] for i in idxs], keep_alive
-                    )
-                    upserts: List[Tuple[Any, ...]] = []
+                    embs = _embed_batch_sync(api_base, model, [texts[i] for i in idxs], keep_alive)
+                    upserts: list[tuple[Any, ...]] = []
                     ts = datetime.utcnow().isoformat() + "Z"
                     for j, irow in enumerate(idxs):
-                        verse_id, _textv, lang, testament, book_no, tcode = vector_rows[
-                            irow
-                        ]
+                        verse_id, _textv, lang, testament, book_no, tcode = vector_rows[irow]
                         vec = embs[j]
                         if len(vec) != embedding_dim:
                             raise RuntimeError(
@@ -1535,9 +1502,7 @@ def embed_verses(
                             )
                         )
                     if upserts:
-                        values_sql = ",".join(
-                            ["(%s, %s::vector, %s, %s, %s, %s)"] * len(upserts)
-                        )
+                        values_sql = ",".join(["(%s, %s::vector, %s, %s, %s, %s)"] * len(upserts))
                         cur.execute(
                             f"""
                             INSERT INTO verse_embedding
@@ -1618,7 +1583,7 @@ def manifest_init(
     out_path: Path = typer.Argument(
         Path("../manifest.json"), help="Where to write the new manifest"
     ),
-    translations: List[str] = typer.Option(
+    translations: list[str] = typer.Option(
         [
             "NIV",
             "ESV",
@@ -1638,25 +1603,21 @@ def manifest_init(
         "--translations",
         help="Translation codes",
     ),
-    languages: List[str] = typer.Option(["en", "es", "el", "he"], "--languages"),
+    languages: list[str] = typer.Option(["en", "es", "el", "he"], "--languages"),
     pipeline_version: str = typer.Option("embed-pipeline@1.2.0", "--pipeline-version"),
     source_version: str = typer.Option("divine_haven.universal_v1", "--source-version"),
     embedding_model: str = typer.Option("embeddinggemma", "--embedding-model"),
     embedding_dim: int = typer.Option(768, "--embedding-dim"),
     pooling: Literal["mean", "max", "cls"] = typer.Option("mean", "--pooling"),
     normalize: bool = typer.Option(True, "--normalize/--no-normalize"),
-    tokenizer: Optional[str] = typer.Option(None, "--tokenizer"),
+    tokenizer: str | None = typer.Option(None, "--tokenizer"),
     truncation_strategy: Literal["none", "sliding", "head", "tail"] = typer.Option(
         "sliding", "--truncation-strategy"
     ),
-    granularity: Literal["verse", "pericope", "sliding"] = typer.Option(
-        "sliding", "--granularity"
-    ),
-    window_size: Optional[int] = typer.Option(128, "--window-size"),
-    stride: Optional[int] = typer.Option(32, "--stride"),
-    lower: bool = typer.Option(
-        False, "--lower/--no-lower", help="Preprocess: lowercase"
-    ),
+    granularity: Literal["verse", "pericope", "sliding"] = typer.Option("sliding", "--granularity"),
+    window_size: int | None = typer.Option(128, "--window-size"),
+    stride: int | None = typer.Option(32, "--stride"),
+    lower: bool = typer.Option(False, "--lower/--no-lower", help="Preprocess: lowercase"),
     strip_punct: bool = typer.Option(False, "--strip-punct/--no-strip-punct"),
     collapse_ws: bool = typer.Option(True, "--collapse-ws/--no-collapse-ws"),
     vectorscale: Literal["hnsw", "ivf"] = typer.Option("hnsw", "--vectorscale"),
@@ -1669,24 +1630,20 @@ def manifest_init(
     fts_k: int = typer.Option(50, "--fts-k"),
     fusion: Literal["rrf", "weighted_sum"] = typer.Option("rrf", "--fusion"),
     fusion_k: int = typer.Option(60, "--fusion-k"),
-    weight_vector: Optional[str] = typer.Option(
+    weight_vector: str | None = typer.Option(
         None,
         "--fusion-weights",
         help='JSON mapping for weighted_sum, e.g. \'{"vector":0.7,"fts":0.3}\'',
     ),
-    fts_dictionary: Literal["simple", "english"] = typer.Option(
-        "simple", "--fts-dictionary"
-    ),
-    stopwords: Optional[str] = typer.Option(None, "--fts-stopwords"),
-    discover_dir: Optional[Path] = typer.Option(
+    fts_dictionary: Literal["simple", "english"] = typer.Option("simple", "--fts-dictionary"),
+    stopwords: str | None = typer.Option(None, "--fts-stopwords"),
+    discover_dir: Path | None = typer.Option(
         None, "--discover-dir", help="Scan dir for batches: input_glob + mapping_glob"
     ),
     input_glob: str = typer.Option("**/batch_input.*.jsonl", "--input-glob"),
     mapping_glob: str = typer.Option("**/mapping.*.jsonl", "--mapping-glob"),
     checksums: bool = typer.Option(True, "--checksums/--no-checksums"),
-    operator: Optional[str] = typer.Option(
-        "pipeline/init:embeddinggemma-768", "--operator"
-    ),
+    operator: str | None = typer.Option("pipeline/init:embeddinggemma-768", "--operator"),
     overwrite: bool = typer.Option(False, "--overwrite/--no-overwrite"),
 ) -> None:
     """Create a fresh manifest.json with refined schema; optionally discover batch files."""
@@ -1707,12 +1664,8 @@ def manifest_init(
         normalize=normalize,
         tokenizer=tokenizer,
         truncation_strategy=truncation_strategy,
-        chunking=Chunking(
-            granularity=granularity, window_size=window_size, stride=stride
-        ),
-        preprocess=Preprocess(
-            lower=lower, strip_punct=strip_punct, collapse_ws=collapse_ws
-        ),
+        chunking=Chunking(granularity=granularity, window_size=window_size, stride=stride),
+        preprocess=Preprocess(lower=lower, strip_punct=strip_punct, collapse_ws=collapse_ws),
         filters=Filters(books_included="all"),
     )
 
@@ -1741,7 +1694,7 @@ def manifest_init(
         ),
     )
 
-    batches: List[BatchEntry] = []
+    batches: list[BatchEntry] = []
     if discover_dir:
         inputs = sorted(discover_dir.glob(input_glob))
         mappings = sorted(discover_dir.glob(mapping_glob))
@@ -1800,9 +1753,7 @@ def manifest_init(
     with out_path.open("w", encoding="utf-8") as f:
         json.dump(manifest.model_dump(mode="json"), f, indent=2, ensure_ascii=False)
 
-    typer.secho(
-        f"Wrote {out_path} (run_id={run_id}) ✔", fg=typer.colors.GREEN, bold=True
-    )
+    typer.secho(f"Wrote {out_path} (run_id={run_id}) ✔", fg=typer.colors.GREEN, bold=True)
 
 
 # ---------------------------

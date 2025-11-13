@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Optional, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 import asyncpg
 
@@ -16,15 +17,15 @@ class ChunkRepository:
     @staticmethod
     def _build_filters(
         start_index: int,
-        translation: Optional[str],
-        book_number: Optional[int],
-        testament: Optional[str],
-        window_size: Optional[int],
-    ) -> tuple[str, List[Any], int]:
+        translation: str | None,
+        book_number: int | None,
+        testament: str | None,
+        window_size: int | None,
+    ) -> tuple[str, list[Any], int]:
         """Assemble a dynamic WHERE clause and positional parameters."""
 
-        filters: List[str] = []
-        params: List[Any] = []
+        filters: list[str] = []
+        params: list[Any] = []
         idx = start_index
 
         if translation:
@@ -53,10 +54,10 @@ class ChunkRepository:
     async def count_chunks(
         self,
         *,
-        translation: Optional[str] = None,
-        book_number: Optional[int] = None,
-        testament: Optional[str] = None,
-        window_size: Optional[int] = None,
+        translation: str | None = None,
+        book_number: int | None = None,
+        testament: str | None = None,
+        window_size: int | None = None,
     ) -> int:
         """Return the number of chunks matching the supplied filters."""
 
@@ -79,15 +80,15 @@ class ChunkRepository:
         self,
         *,
         embedding: Sequence[float],
-        translation: Optional[str] = None,
-        book_number: Optional[int] = None,
-        testament: Optional[str] = None,
-        window_size: Optional[int] = None,
+        translation: str | None = None,
+        book_number: int | None = None,
+        testament: str | None = None,
+        window_size: int | None = None,
         limit: int = 50,
         offset: int = 0,
         include_context: bool = False,
         context_verses: int = 2,
-    ) -> List[asyncpg.Record]:
+    ) -> list[asyncpg.Record]:
         """Execute a semantic similarity search across chunk embeddings."""
 
         where_clause, params, next_idx = self._build_filters(
@@ -100,7 +101,7 @@ class ChunkRepository:
 
         sql_context_select = ""
         sql_context_joins = ""
-        final_params: List[Any] = list(params)
+        final_params: list[Any] = list(params)
 
         final_params.extend([embedding, limit, offset])
 
@@ -146,7 +147,7 @@ class ChunkRepository:
             ) after_ctx ON TRUE
             """
             final_params.append(context_verses)
-        
+
         sql = f"""
         SELECT
             ce.chunk_id,
@@ -178,10 +179,10 @@ class ChunkRepository:
         *,
         include_context: bool = False,
         context_verses: int = 2,
-    ) -> Optional[asyncpg.Record]:
+    ) -> asyncpg.Record | None:
         """Fetch a single chunk embedding record by its identifier."""
 
-        params: List[Any] = [chunk_id]
+        params: list[Any] = [chunk_id]
         sql_context_select = ""
         sql_context_joins = ""
 

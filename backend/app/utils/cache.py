@@ -6,8 +6,9 @@ import asyncio
 import pickle
 import time
 from collections import OrderedDict
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, Optional
+from typing import Any
 
 from redis.exceptions import RedisError
 
@@ -148,7 +149,7 @@ class CacheManager:
         await self.l1.set(key, value, ttl=max(ttl, 0))
         return value
 
-    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> None:
+    async def set(self, key: str, value: Any, ttl: int | None = None) -> None:
         ttl = self.default_ttl if ttl is None else ttl
         await self.l1.set(key, value, ttl)
 
@@ -178,8 +179,8 @@ class CacheManager:
 
     def cached(
         self,
-        ttl: Optional[int] = None,
-        key_builder: Optional[Callable[..., str]] = None,
+        ttl: int | None = None,
+        key_builder: Callable[..., str] | None = None,
     ) -> Callable[[Callable[..., Any]], Callable[..., Awaitable[Any]]]:
         """Decorator to cache the results of async functions."""
 
@@ -188,7 +189,9 @@ class CacheManager:
                 raise TypeError("CacheManager.cached decorator requires async functions")
 
             async def wrapper(*args: Any, **kwargs: Any) -> Any:
-                key = key_builder(*args, **kwargs) if key_builder else _build_key(func, args, kwargs)
+                key = (
+                    key_builder(*args, **kwargs) if key_builder else _build_key(func, args, kwargs)
+                )
                 cached_value = await self.get(key)
                 if cached_value is not None:
                     return cached_value
@@ -215,6 +218,4 @@ class CacheManager:
 
 
 def _build_key(func: Callable[..., Any], args: tuple[Any, ...], kwargs: dict[str, Any]) -> str:
-    return "::".join(
-        [func.__module__, func.__qualname__, repr(args), repr(sorted(kwargs.items()))]
-    )
+    return "::".join([func.__module__, func.__qualname__, repr(args), repr(sorted(kwargs.items()))])

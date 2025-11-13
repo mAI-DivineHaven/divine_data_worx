@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import List, Optional, Sequence, Tuple
+from collections.abc import Sequence
 
 import asyncpg
 
@@ -46,8 +46,8 @@ class AssetService:
         *,
         limit: int,
         offset: int,
-        media_type: Optional[str] = None,
-        search: Optional[str] = None,
+        media_type: str | None = None,
+        search: str | None = None,
     ) -> AssetListResponse:
         """Return a paginated list of assets matching optional filters.
 
@@ -167,7 +167,7 @@ class AssetService:
         asset_id: str,
         request: AssetEmbeddingRequest,
         *,
-        embeddings_service: Optional[EmbeddingsService] = None,
+        embeddings_service: EmbeddingsService | None = None,
     ) -> AssetEmbeddingInfo:
         """Store or generate an embedding for the specified asset.
 
@@ -190,7 +190,7 @@ class AssetService:
         if not asset:
             raise LookupError(f"Asset not found: {asset_id}")
 
-        vector: Optional[List[float]] = None
+        vector: list[float] | None = None
         generated = False
 
         if request.embedding is not None:
@@ -372,7 +372,7 @@ class AssetService:
     async def unlink_asset(
         self,
         asset_id: str,
-        verse_ids: Optional[Sequence[str]] = None,
+        verse_ids: Sequence[str] | None = None,
     ) -> AssetUnlinkResponse:
         """Remove verse associations for an asset.
 
@@ -394,7 +394,7 @@ class AssetService:
         removed = await self.repo.delete_links(asset_id=asset_id, verse_ids=verse_ids)
         return AssetUnlinkResponse(asset_id=asset_id, removed=removed)
 
-    async def list_links(self, asset_id: str) -> Tuple[int, List[AssetVerseLink]]:
+    async def list_links(self, asset_id: str) -> tuple[int, list[AssetVerseLink]]:
         """Fetch all verse links for an asset.
 
         Args:

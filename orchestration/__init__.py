@@ -20,7 +20,6 @@ from .schedules import (
     pgvector_index_schedule,
 )
 
-
 resource_instances = build_resource_instances()
 
 

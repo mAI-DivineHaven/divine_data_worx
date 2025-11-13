@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Dict, Iterable, List, Tuple
 from uuid import UUID
 
 from ..schemas.users import ProfileSurvey, SharePreference, ShareScope
 
-
-PROFILE_FIELDS: Dict[str, Dict[str, object]] = {
+PROFILE_FIELDS: dict[str, dict[str, object]] = {
     "bio": {"basic": True, "empty": None},
     "spiritual_background": {"basic": True, "empty": None},
     "denominational_identity": {"basic": True, "empty": None},
@@ -36,12 +35,12 @@ class Viewer:
 
 
 def merge_share_preferences(
-    stored: Dict[str, SharePreference] | None
-) -> Dict[str, SharePreference]:
+    stored: dict[str, SharePreference] | None,
+) -> dict[str, SharePreference]:
     """Ensure every known profile field has a share preference."""
 
     stored = stored or {}
-    merged: Dict[str, SharePreference] = {}
+    merged: dict[str, SharePreference] = {}
     for field in PROFILE_FIELDS.keys():
         merged[field] = stored.get(field, SharePreference())
     return merged
@@ -50,16 +49,16 @@ def merge_share_preferences(
 def filter_profile_fields(
     owner_id: UUID,
     profile: ProfileSurvey | None,
-    share_prefs: Dict[str, SharePreference] | None,
+    share_prefs: dict[str, SharePreference] | None,
     viewer: Viewer,
-) -> Tuple[ProfileSurvey | None, List[str]]:
+) -> tuple[ProfileSurvey | None, list[str]]:
     """Filter profile data based on share preferences and viewer context."""
 
     if profile is None:
         return None, []
 
     prefs = merge_share_preferences(share_prefs)
-    hidden: List[str] = []
+    hidden: list[str] = []
 
     profile_data = profile.model_dump()
 

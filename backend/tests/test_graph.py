@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from typing import List
 from unittest.mock import AsyncMock
 
 import pytest
@@ -12,7 +11,7 @@ from backend.app.services.graph import GraphQueryService
 
 
 @pytest.fixture()
-def sample_neighborhood() -> List[dict]:
+def sample_neighborhood() -> list[dict]:
     """Provide a canonical verse neighbourhood payload."""
 
     return [
@@ -47,7 +46,7 @@ class TestGraphEndpoints:
         self,
         client: TestClient,
         override_db_dependencies,
-        sample_neighborhood: List[dict],
+        sample_neighborhood: list[dict],
     ) -> None:
         mock_session = override_db_dependencies
         result = AsyncMock()
@@ -69,7 +68,7 @@ class TestGraphEndpoints:
         self,
         client: TestClient,
         override_db_dependencies,
-        sample_neighborhood: List[dict],
+        sample_neighborhood: list[dict],
     ) -> None:
         mock_session = override_db_dependencies
         result = AsyncMock()

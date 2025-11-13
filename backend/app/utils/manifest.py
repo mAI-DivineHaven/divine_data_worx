@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from threading import Lock
-from typing import Dict, Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -25,10 +25,8 @@ class FusionConfig(BaseModel):
 
     method: Literal["rrf", "weighted_sum"] = "rrf"
     k: int = Field(default=60, ge=1)
-    weight_vector: Optional[Dict[str, float]] = None
-    graph_expansion: GraphExpansionConfig = Field(
-        default_factory=GraphExpansionConfig
-    )
+    weight_vector: dict[str, float] | None = None
+    graph_expansion: GraphExpansionConfig = Field(default_factory=GraphExpansionConfig)
 
 
 class HybridConfig(BaseModel):
@@ -58,7 +56,7 @@ _manifest_generation: int = 0
 _manifest_lock = Lock()
 
 
-def load_manifest(path: Optional[str] = None, *, force_reload: bool = False) -> ManifestConfig:
+def load_manifest(path: str | None = None, *, force_reload: bool = False) -> ManifestConfig:
     """Load and validate the manifest file, caching the parsed model."""
 
     manifest_path = Path(path or settings.MANIFEST_PATH)

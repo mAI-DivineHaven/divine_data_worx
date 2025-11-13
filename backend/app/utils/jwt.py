@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import base64
-import json
-import hmac
 import hashlib
+import hmac
+import json
 import time
-from typing import Any, Dict, Iterable, Optional
+from collections.abc import Iterable
+from typing import Any
 
 
 class JWTError(Exception):
@@ -31,7 +32,7 @@ class JWTClaimError(JWTError):
 
 
 def _b64decode(segment: str) -> bytes:
-    padding = '=' * (-len(segment) % 4)
+    padding = "=" * (-len(segment) % 4)
     return base64.urlsafe_b64decode(segment + padding)
 
 
@@ -39,9 +40,9 @@ def decode_jwt(
     token: str,
     secret_key: str,
     algorithms: Iterable[str] | None = None,
-    audience: Optional[str] = None,
-    issuer: Optional[str] = None,
-) -> Dict[str, Any]:
+    audience: str | None = None,
+    issuer: str | None = None,
+) -> dict[str, Any]:
     """Decode and validate a JWT payload without external dependencies."""
 
     if not secret_key:
@@ -59,7 +60,7 @@ def decode_jwt(
     if algorithm not in algorithms:
         raise JWTAlgorithmError(f"Unsupported JWT algorithm: {algorithm}")
 
-    signing_input = f"{header_segment}.{payload_segment}".encode("utf-8")
+    signing_input = f"{header_segment}.{payload_segment}".encode()
     expected_signature = _sign(signing_input, secret_key, algorithm)
     actual_signature = _b64decode(signature_segment)
 

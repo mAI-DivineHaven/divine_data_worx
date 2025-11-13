@@ -12,26 +12,27 @@ Provides:
 
 import asyncio
 import logging
+from collections.abc import AsyncGenerator, Generator
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import AsyncGenerator, Generator, List
 from unittest.mock import AsyncMock
+
 import pytest
 import pytest_asyncio
-from httpx import ASGITransport, AsyncClient
 from fastapi.testclient import TestClient
+from httpx import ASGITransport, AsyncClient
 
-from backend.app.main import app
 from backend.app.config import settings
-from backend.app.db.postgres_async import get_pg
 from backend.app.db.neo4j import get_neo4j_session
+from backend.app.db.postgres_async import get_pg
 from backend.app.dependencies.cache import get_cache_manager
-
+from backend.app.main import app
 
 # ============================================================================
 # Logging Configuration for Tests
 # ============================================================================
+
 
 def setup_test_logging():
     """Configure comprehensive logging for test runs."""
@@ -43,16 +44,16 @@ def setup_test_logging():
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.INFO)
     formatter = logging.Formatter(
-        fmt='%(asctime)s | %(levelname)-8s | %(name)-20s | %(funcName)-25s | %(message)s',
-        datefmt='%H:%M:%S'
+        fmt="%(asctime)s | %(levelname)-8s | %(name)-20s | %(funcName)-25s | %(message)s",
+        datefmt="%H:%M:%S",
     )
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
 
     # File handler
-    log_path = Path('tests/test_run.log')
+    log_path = Path("tests/test_run.log")
     log_path.parent.mkdir(parents=True, exist_ok=True)
-    file_handler = logging.FileHandler(log_path, mode='w')
+    file_handler = logging.FileHandler(log_path, mode="w")
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
@@ -72,6 +73,7 @@ test_logger = setup_test_logging()
 # Pytest Configuration Hooks
 # ============================================================================
 
+
 def pytest_configure(config):
     """Pytest configuration hook."""
     test_logger.info("=" * 80)
@@ -86,6 +88,7 @@ def pytest_configure(config):
 def pytest_sessionstart(session):
     """Called after the Session object has been created."""
     import sys
+
     test_logger.info(f"Python version: {sys.version.split()[0]}")
     test_logger.info(f"Test directory: {session.config.rootpath}")
 
@@ -103,6 +106,7 @@ def pytest_runtest_teardown(item, nextitem):
 # ============================================================================
 # Event Loop Fixtures
 # ============================================================================
+
 
 @pytest.fixture(scope="session")
 def event_loop():
@@ -126,6 +130,7 @@ def event_loop():
 # ============================================================================
 # Mock Database Fixtures (for unit tests)
 # ============================================================================
+
 
 @pytest.fixture
 def mock_pg_conn():
@@ -260,31 +265,83 @@ def mock_pg_conn():
         **{row["verse_id"]: row for row in genesis_esv_verses},
     }
     fts_items = [
-        {"verse_id": "NIV:1:1:1", "text": "In the beginning God created the heavens and the earth.", "score": 0.98},
+        {
+            "verse_id": "NIV:1:1:1",
+            "text": "In the beginning God created the heavens and the earth.",
+            "score": 0.98,
+        },
         {"verse_id": "NIV:1:1:2", "text": "Now the earth was formless and empty.", "score": 0.95},
         {"verse_id": "NIV:1:1:3", "text": "God said, 'Let there be light.'", "score": 0.93},
         {"verse_id": "NIV:1:1:4", "text": "God saw that the light was good.", "score": 0.90},
-        {"verse_id": "NIV:1:1:5", "text": "He separated the light from the darkness.", "score": 0.88},
-        {"verse_id": "ESV:1:1:1", "text": "In the beginning, God created the heavens and the earth.", "score": 0.86},
+        {
+            "verse_id": "NIV:1:1:5",
+            "text": "He separated the light from the darkness.",
+            "score": 0.88,
+        },
+        {
+            "verse_id": "ESV:1:1:1",
+            "text": "In the beginning, God created the heavens and the earth.",
+            "score": 0.86,
+        },
         {"verse_id": "ESV:1:1:2", "text": "The earth was without form and void.", "score": 0.84},
-        {"verse_id": "ESV:1:1:3", "text": "And God said, 'Let there be light,' and there was light.", "score": 0.82},
+        {
+            "verse_id": "ESV:1:1:3",
+            "text": "And God said, 'Let there be light,' and there was light.",
+            "score": 0.82,
+        },
         {"verse_id": "ESV:1:1:4", "text": "God saw that the light was good.", "score": 0.80},
-        {"verse_id": "ESV:1:1:5", "text": "God separated the light from the darkness.", "score": 0.78},
+        {
+            "verse_id": "ESV:1:1:5",
+            "text": "God separated the light from the darkness.",
+            "score": 0.78,
+        },
     ]
     vector_hits_by_translation = {
         None: [
-            {"verse_id": verse_row_primary["verse_id"], "text": verse_row_primary["text"], "score": 0.91},
-            {"verse_id": verse_row_secondary["verse_id"], "text": verse_row_secondary["text"], "score": 0.89},
-            {"verse_id": verse_row_esv_primary["verse_id"], "text": verse_row_esv_primary["text"], "score": 0.87},
-            {"verse_id": verse_row_esv_secondary["verse_id"], "text": verse_row_esv_secondary["text"], "score": 0.85},
+            {
+                "verse_id": verse_row_primary["verse_id"],
+                "text": verse_row_primary["text"],
+                "score": 0.91,
+            },
+            {
+                "verse_id": verse_row_secondary["verse_id"],
+                "text": verse_row_secondary["text"],
+                "score": 0.89,
+            },
+            {
+                "verse_id": verse_row_esv_primary["verse_id"],
+                "text": verse_row_esv_primary["text"],
+                "score": 0.87,
+            },
+            {
+                "verse_id": verse_row_esv_secondary["verse_id"],
+                "text": verse_row_esv_secondary["text"],
+                "score": 0.85,
+            },
         ],
         "NIV": [
-            {"verse_id": verse_row_primary["verse_id"], "text": verse_row_primary["text"], "score": 0.91},
-            {"verse_id": verse_row_secondary["verse_id"], "text": verse_row_secondary["text"], "score": 0.89},
+            {
+                "verse_id": verse_row_primary["verse_id"],
+                "text": verse_row_primary["text"],
+                "score": 0.91,
+            },
+            {
+                "verse_id": verse_row_secondary["verse_id"],
+                "text": verse_row_secondary["text"],
+                "score": 0.89,
+            },
         ],
         "ESV": [
-            {"verse_id": verse_row_esv_primary["verse_id"], "text": verse_row_esv_primary["text"], "score": 0.88},
-            {"verse_id": verse_row_esv_secondary["verse_id"], "text": verse_row_esv_secondary["text"], "score": 0.86},
+            {
+                "verse_id": verse_row_esv_primary["verse_id"],
+                "text": verse_row_esv_primary["text"],
+                "score": 0.88,
+            },
+            {
+                "verse_id": verse_row_esv_secondary["verse_id"],
+                "text": verse_row_esv_secondary["text"],
+                "score": 0.86,
+            },
         ],
     }
     translation_rows = [
@@ -367,9 +424,11 @@ def mock_pg_conn():
             limit = args[-2]
             offset = args[-1]
             filtered_items = [
-                item for item in fts_items if (not translation or item["verse_id"].startswith(f"{translation}:"))
+                item
+                for item in fts_items
+                if (not translation or item["verse_id"].startswith(f"{translation}:"))
             ]
-            paginated = filtered_items[offset: offset + limit]
+            paginated = filtered_items[offset : offset + limit]
             return create_mock_record({"total": len(filtered_items), "items": paginated})
         if "FROM SEARCH_LOG" in sql and "AVG" in sql:
             return create_mock_record(
@@ -423,7 +482,7 @@ def mock_pg_conn():
             offset = args[4] if len(args) > 4 else 0
             chapter_key = (translation, book_number, chapter_number)
             verses = chapter_verse_map.get(chapter_key, [])
-            slice_verses = verses[offset: offset + limit]
+            slice_verses = verses[offset : offset + limit]
             return [
                 create_mock_record({"verse_id": row["verse_id"], "text": row["text"]})
                 for row in slice_verses
@@ -445,7 +504,9 @@ def mock_pg_conn():
         if "FROM BOOK" in sql and "ORDER BY BOOK_NUMBER" in sql:
             translation = args[0] if len(args) > 0 else None
             filtered_books = [
-                row for row in books_data if not translation or row["translation_code"] == translation
+                row
+                for row in books_data
+                if not translation or row["translation_code"] == translation
             ]
             return [create_mock_record(row) for row in filtered_books]
         if "FROM CHAPTER" in sql and "ORDER BY CHAPTER_NUMBER" in sql:
@@ -526,8 +587,8 @@ def override_db_dependencies(mock_pg_conn, mock_neo4j_session):
     settings.REDIS_URL = ""
     get_cache_manager.cache_clear()
 
-    from backend.app.db import postgres_async
     from backend.app import main as app_main
+    from backend.app.db import postgres_async
 
     original_init_pool = postgres_async.init_pool
     original_app_init_pool = app_main.init_pool
@@ -559,6 +620,7 @@ def override_db_dependencies(mock_pg_conn, mock_neo4j_session):
 # ============================================================================
 # Test Client Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def client(override_db_dependencies) -> Generator[TestClient, None, None]:
@@ -613,10 +675,7 @@ async def async_client(override_db_dependencies) -> AsyncGenerator[AsyncClient, 
     """
     test_logger.debug("Creating AsyncClient with mocked dependencies")
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://testserver"
-    ) as ac:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as ac:
         test_logger.debug("AsyncClient ready")
         yield ac
 
@@ -626,6 +685,7 @@ async def async_client(override_db_dependencies) -> AsyncGenerator[AsyncClient, 
 # ============================================================================
 # Sample Test Data Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def sample_verse_data():
@@ -637,7 +697,7 @@ def sample_verse_data():
         "chapter_number": 1,
         "verse_number": 1,
         "suffix": "",
-        "text": "In the beginning God created the heavens and the earth."
+        "text": "In the beginning God created the heavens and the earth.",
     }
 
 
@@ -652,7 +712,7 @@ def sample_verses_list():
             "chapter_number": 1,
             "verse_number": 1,
             "suffix": "",
-            "text": "In the beginning God created the heavens and the earth."
+            "text": "In the beginning God created the heavens and the earth.",
         },
         {
             "verse_id": "NIV:1:1:2",
@@ -661,8 +721,8 @@ def sample_verses_list():
             "chapter_number": 1,
             "verse_number": 2,
             "suffix": "",
-            "text": "Now the earth was formless and empty."
-        }
+            "text": "Now the earth was formless and empty.",
+        },
     ]
 
 
@@ -672,7 +732,7 @@ def sample_translations_list():
     return [
         {"translation_code": "NIV", "language": "en", "format": "divine_haven.universal_v1"},
         {"translation_code": "ESV", "language": "en", "format": "divine_haven.universal_v1"},
-        {"translation_code": "KJV", "language": "en", "format": "divine_haven.universal_v1"}
+        {"translation_code": "KJV", "language": "en", "format": "divine_haven.universal_v1"},
     ]
 
 
@@ -682,40 +742,26 @@ def sample_books_list():
     return [
         {"translation_code": "NIV", "book_number": 1, "name": "Genesis", "testament": "Old"},
         {"translation_code": "NIV", "book_number": 2, "name": "Exodus", "testament": "Old"},
-        {"translation_code": "NIV", "book_number": 40, "name": "Matthew", "testament": "New"}
+        {"translation_code": "NIV", "book_number": 40, "name": "Matthew", "testament": "New"},
     ]
 
 
 @pytest.fixture
 def sample_translation_data():
     """Sample translation data for testing."""
-    return {
-        "translation_code": "NIV",
-        "language": "en",
-        "format": "divine_haven.universal_v1"
-    }
+    return {"translation_code": "NIV", "language": "en", "format": "divine_haven.universal_v1"}
 
 
 @pytest.fixture
 def sample_book_data():
     """Sample book data for testing."""
-    return {
-        "translation_code": "NIV",
-        "book_number": 1,
-        "name": "Genesis",
-        "testament": "Old"
-    }
+    return {"translation_code": "NIV", "book_number": 1, "name": "Genesis", "testament": "Old"}
 
 
 @pytest.fixture
 def sample_chunk_query():
     """Sample chunk search query for testing."""
-    return {
-        "embedding": [0.1] * 768,
-        "model": "embeddinggemma",
-        "dim": 768,
-        "top_k": 10
-    }
+    return {"embedding": [0.1] * 768, "model": "embeddinggemma", "dim": 768, "top_k": 10}
 
 
 @pytest.fixture
@@ -726,21 +772,20 @@ def sample_asset_data():
         "title": "Test Image",
         "description": "A test image asset",
         "license": "CC-BY-4.0",
-        "origin_url": "https://example.com/image.png"
+        "origin_url": "https://example.com/image.png",
     }
 
 
 @pytest.fixture
 def sample_batch_verse_request():
     """Sample batch verse request for testing."""
-    return {
-        "verse_ids": ["NIV:1:1:1", "NIV:1:1:2", "NIV:43:3:16"]
-    }
+    return {"verse_ids": ["NIV:1:1:1", "NIV:1:1:2", "NIV:43:3:16"]}
 
 
 # ============================================================================
 # Helper Functions for Configuring Mocks
 # ============================================================================
+
 
 def create_mock_record(data: dict):
     """
@@ -755,8 +800,10 @@ def create_mock_record(data: dict):
     Returns:
         A mock object that mimics asyncpg.Record behavior
     """
+
     class MockRecord(dict):
         """Mock asyncpg.Record that supports both dict and attribute access."""
+
         def __init__(self, data):
             super().__init__(data)
             self.__dict__.update(data)
@@ -779,7 +826,7 @@ def create_mock_record(data: dict):
     return MockRecord(data)
 
 
-def configure_mock_fetch(mock_conn, return_data: List[dict]):
+def configure_mock_fetch(mock_conn, return_data: list[dict]):
     """
     Configure a mock connection to return specific data from fetch().
 
@@ -842,6 +889,7 @@ def configure_mock_fetchval(mock_conn, return_value):
 # Pytest Hooks for Enhanced Reporting
 # ============================================================================
 
+
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     """Hook to log test results with detailed information."""
@@ -855,7 +903,7 @@ def pytest_runtest_makereport(item, call):
             test_logger.error(f"[FAIL] {item.nodeid}")
             if report.longrepr:
                 # Log first few lines of error for quick diagnosis
-                error_lines = str(report.longreprtext).split('\n')[:5]
+                error_lines = str(report.longreprtext).split("\n")[:5]
                 for line in error_lines:
                     if line.strip():
                         test_logger.error(f"  {line}")

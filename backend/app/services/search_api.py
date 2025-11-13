@@ -12,7 +12,7 @@ from __future__ import annotations
 import asyncpg
 
 from ..config import settings
-from ..models import FTSQuery, SearchResponse, SearchHit, VectorQuery, HybridQuery
+from ..models import FTSQuery, HybridQuery, SearchHit, SearchResponse, VectorQuery
 from ..repositories.search import SearchRepository
 
 

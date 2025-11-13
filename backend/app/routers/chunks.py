@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
 import asyncpg
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from ..db.postgres_async import get_pg
 from ..models import ChunkHit, ChunkSearchQuery, ChunkSearchResponse
@@ -39,9 +39,7 @@ async def search_chunks(
 @router.get("/{chunk_id}", response_model=ChunkHit)
 async def get_chunk(
     chunk_id: str,
-    include_context: bool = Query(
-        False, description="Include verse context around the chunk"
-    ),
+    include_context: bool = Query(False, description="Include verse context around the chunk"),
     conn: asyncpg.Connection = Depends(get_pg),
 ) -> ChunkHit:
     """Retrieve a single chunk embedding record by ID."""

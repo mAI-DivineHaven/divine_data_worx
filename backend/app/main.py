@@ -34,13 +34,16 @@ Interactive Documentation:
     - ReDoc: http://localhost:8000/redoc
 """
 
-from typing import AsyncIterator, Dict
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from .config import settings
+from .db.neo4j import close_driver, init_driver
+from .db.postgres_async import init_pool
 from .dependencies.cache import get_cache_manager
 from .middleware.auth import JWTAuthMiddleware
 from .middleware.rate_limit import RateLimitMiddleware
@@ -60,11 +63,9 @@ from .routers import (
     user_profiles,
     verses,
 )
-from .db.postgres_async import init_pool
-from .utils.redis import close_redis
-from .db.neo4j import close_driver, init_driver
 from .utils.logging import configure_logging
 from .utils.observability import configure_tracing
+from .utils.redis import close_redis
 
 
 @asynccontextmanager

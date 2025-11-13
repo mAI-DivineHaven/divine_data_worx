@@ -22,7 +22,9 @@ Dependencies:
     - asyncpg: High-performance async PostgreSQL driver
 """
 
-from typing import AsyncIterator, Dict, Any, List, Tuple, Optional
+from collections.abc import AsyncIterator
+from typing import Any
+
 import asyncpg
 
 
@@ -78,7 +80,7 @@ class PgClient:
         self.dsn: str = dsn
         self.min_pool_size: int = min_pool_size
         self.max_pool_size: int = max_pool_size
-        self.pool: Optional[asyncpg.Pool] = None
+        self.pool: asyncpg.Pool | None = None
 
     async def __aenter__(self) -> "PgClient":
         """
@@ -143,7 +145,7 @@ class PgClient:
     async def iter_verses(
         self,
         batch_size: int = 5000,
-    ) -> AsyncIterator[List[Dict[str, Any]]]:
+    ) -> AsyncIterator[list[dict[str, Any]]]:
         """
         Stream canonical verse rows across ALL translations with memory-efficient batching.
 
@@ -219,7 +221,7 @@ class PgClient:
             # Server-side cursor for memory-efficient streaming
             async with conn.transaction():
                 cursor = await conn.cursor(sql)
-                batch: List[Dict[str, Any]] = []
+                batch: list[dict[str, Any]] = []
 
                 async for record in cursor:
                     # Convert asyncpg.Record to dict for easier consumption
@@ -267,9 +269,7 @@ class PgClient:
             consider using iter_canonical_keys() for streaming.
         """
         if self.pool is None:
-            raise RuntimeError(
-                "PgClient must be used within async context manager"
-            )
+            raise RuntimeError("PgClient must be used within async context manager")
 
         sql = """
             SELECT DISTINCT
@@ -294,7 +294,7 @@ class PgClient:
             rows = await conn.fetch(sql)
             return [row["reference"] for row in rows]
 
-    async def iter_canonical_keys(self) -> AsyncIterator[Tuple[int, int, int, str]]:
+    async def iter_canonical_keys(self) -> AsyncIterator[tuple[int, int, int, str]]:
         """
         Stream DISTINCT canonical verse keys (book, chapter, verse, suffix).
 

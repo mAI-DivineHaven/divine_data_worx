@@ -2,10 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
-from typing import Optional
-from uuid import UUID
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
@@ -54,14 +50,17 @@ async def login(
     if not record:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
-    password_hash: Optional[str] = record.get("password_hash")
+    password_hash: str | None = record.get("password_hash")
     if not password_hash or not verify_password(payload.password, password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
     user = _build_user_summary(record)
 
     if not settings.JWT_SECRET_KEY:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Authentication not configured")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Authentication not configured",
+        )
 
     expires_in_seconds = settings.JWT_ACCESS_TOKEN_EXPIRES_MINUTES * 60
     token_payload = {

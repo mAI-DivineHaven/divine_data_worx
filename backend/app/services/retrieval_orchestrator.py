@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict
 
 from ..models import (
     FusionInfo,
@@ -81,7 +80,7 @@ class RetrievalOrchestrator:
         search_response = await self._search.hybrid_search(hybrid_query)
 
         graph_enabled = self._fusion.graph_enabled and query.include_parallels
-        expansions: Dict[str, GraphExpansion] = {}
+        expansions: dict[str, GraphExpansion] = {}
         if graph_enabled:
             limit = min(
                 query.parallel_limit,
@@ -119,7 +118,7 @@ class RetrievalOrchestrator:
     def _apply_graph_boost(
         self,
         hit: SearchHit,
-        expansions: Dict[str, GraphExpansion],
+        expansions: dict[str, GraphExpansion],
     ) -> SearchHit:
         """Apply a simple boost to the hit score based on graph coverage."""
 
@@ -137,21 +136,15 @@ class RetrievalOrchestrator:
     def _build_hybrid_query(self, query: RetrievalQuery) -> RetrievalQuery:
         """Normalise query parameters with manifest-backed defaults."""
 
-        vector_k = (
-            query.vector_k
-            if "vector_k" in query.model_fields_set
-            else self._fusion.vector_k
-        )
-        fts_k = (
-            query.fts_k if "fts_k" in query.model_fields_set else self._fusion.fts_k
-        )
-        k_rrf = (
-            query.k_rrf if "k_rrf" in query.model_fields_set else self._fusion.k_rrf
-        )
+        vector_k = query.vector_k if "vector_k" in query.model_fields_set else self._fusion.vector_k
+        fts_k = query.fts_k if "fts_k" in query.model_fields_set else self._fusion.fts_k
+        k_rrf = query.k_rrf if "k_rrf" in query.model_fields_set else self._fusion.k_rrf
         payload = query.model_dump()
-        payload.update({
-            "vector_k": vector_k,
-            "fts_k": fts_k,
-            "k_rrf": k_rrf,
-        })
+        payload.update(
+            {
+                "vector_k": vector_k,
+                "fts_k": fts_k,
+                "k_rrf": k_rrf,
+            }
+        )
         return RetrievalQuery(**payload)

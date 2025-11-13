@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from pathlib import Path
 from statistics import mean
-from typing import Dict, List, Sequence
 from unittest.mock import AsyncMock
 
 import pytest
@@ -20,7 +20,7 @@ MIN_HIT_RATE = 0.9
 MIN_MRR = 0.8
 
 
-def _load_cases() -> List[dict]:
+def _load_cases() -> list[dict]:
     if not GOLDEN_DATASET.exists():
         pytest.skip(f"Golden dataset missing: {GOLDEN_DATASET}")
     payload = json.loads(GOLDEN_DATASET.read_text())
@@ -30,13 +30,13 @@ def _load_cases() -> List[dict]:
 
 
 @pytest.fixture(scope="module")
-def golden_cases() -> List[dict]:
+def golden_cases() -> list[dict]:
     return _load_cases()
 
 
 @pytest.fixture(scope="module")
-def hybrid_lookup(golden_cases: Sequence[dict]) -> Dict[tuple[str, str], dict]:
-    lookup: Dict[tuple[str, str], dict] = {}
+def hybrid_lookup(golden_cases: Sequence[dict]) -> dict[tuple[str, str], dict]:
+    lookup: dict[tuple[str, str], dict] = {}
     for case in golden_cases:
         request = case["hybrid_request"]
         key = ((request.get("q") or ""), request.get("translation") or "")
@@ -44,12 +44,12 @@ def hybrid_lookup(golden_cases: Sequence[dict]) -> Dict[tuple[str, str], dict]:
     return lookup
 
 
-async def _fake_hybrid(self, *, query, translation, **_: dict) -> List[dict]:
+async def _fake_hybrid(self, *, query, translation, **_: dict) -> list[dict]:
     raise AssertionError("hybrid_lookup patch not initialised")
 
 
 @pytest.fixture
-def patch_hybrid(monkeypatch: pytest.MonkeyPatch, hybrid_lookup: Dict[tuple[str, str], dict]):
+def patch_hybrid(monkeypatch: pytest.MonkeyPatch, hybrid_lookup: dict[tuple[str, str], dict]):
     async def fake_hybrid(self, *, query, translation, **kwargs):
         key = (query or "", translation or "")
         case = hybrid_lookup.get(key)
@@ -79,8 +79,8 @@ def test_golden_hybrid_and_graph_alignment(
     patch_hybrid,
 ):
     mock_session = override_db_dependencies
-    hits: List[float] = []
-    mrrs: List[float] = []
+    hits: list[float] = []
+    mrrs: list[float] = []
 
     for case in golden_cases:
         graph_payload = case["graph"]["neo4j_payload"]

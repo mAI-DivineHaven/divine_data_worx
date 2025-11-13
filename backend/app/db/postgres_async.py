@@ -8,8 +8,10 @@ The connection pool is initialized once at application startup and reused
 across all requests for optimal performance.
 """
 
+from collections.abc import AsyncIterator
+
 import asyncpg
-from typing import AsyncIterator, Optional
+
 from ..config import settings
 
 
@@ -41,7 +43,7 @@ def _normalize_dsn(dsn: str) -> str:
 DSN = _normalize_dsn(settings.DATABASE_URL)
 
 # Global connection pool (initialized at startup)
-_pool: Optional[asyncpg.Pool] = None
+_pool: asyncpg.Pool | None = None
 
 
 async def _init_conn(conn: asyncpg.Connection) -> None:

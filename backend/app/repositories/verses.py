@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
-
 import asyncpg
 
-from ..models import Verse, VerseLite, Book, Chapter, Translation
+from ..models import Book, Chapter, Translation, Verse, VerseLite
 
 
 class VerseRepository:
@@ -15,7 +13,7 @@ class VerseRepository:
     def __init__(self, conn: asyncpg.Connection) -> None:
         self._conn = conn
 
-    async def get_by_id(self, verse_id: str) -> Optional[Verse]:
+    async def get_by_id(self, verse_id: str) -> Verse | None:
         """Fetch a verse by its identifier."""
         row = await self._conn.fetchrow(
             """
@@ -36,7 +34,7 @@ class VerseRepository:
         chapter_number: int,
         limit: int,
         offset: int,
-    ) -> List[VerseLite]:
+    ) -> list[VerseLite]:
         """List verses in a chapter with pagination."""
         rows = await self._conn.fetch(
             """
@@ -56,7 +54,7 @@ class VerseRepository:
         )
         return [VerseLite(**dict(r)) for r in rows]
 
-    async def list_translations(self) -> List[Translation]:
+    async def list_translations(self) -> list[Translation]:
         """Return all translation metadata."""
         rows = await self._conn.fetch(
             """
@@ -67,7 +65,7 @@ class VerseRepository:
         )
         return [Translation(**dict(r)) for r in rows]
 
-    async def list_books(self, *, translation: str) -> List[Book]:
+    async def list_books(self, *, translation: str) -> list[Book]:
         """Return all books for a translation."""
         rows = await self._conn.fetch(
             """
@@ -85,7 +83,7 @@ class VerseRepository:
         *,
         translation: str,
         book_number: int,
-    ) -> List[Chapter]:
+    ) -> list[Chapter]:
         """Return all chapters for a book in a translation."""
         rows = await self._conn.fetch(
             """
